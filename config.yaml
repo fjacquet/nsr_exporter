@@ -11,6 +11,7 @@ server:
 collection:
   interval: "5m"      # background poll frequency
   timeout: "60s"      # per-system API deadline
+  backupWindow: "24h" # sizing: only fetch /backups save sets newer than this (ADR-0010)
 systems:
   - name: nsr-prod-01
     host: "https://networker-prod-01.local:9090"   # 9090 = NetWorker REST API port

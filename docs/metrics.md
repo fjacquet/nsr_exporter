@@ -67,7 +67,16 @@ Field names are INFERRED (see `storage.go`) pending live validation.
 | `nsr_datadomain_capacity_available_bytes` | Gauge | `dd_name`, `model`, `os_version` | DD free |
 | `nsr_datadomain_logical_capacity_used_bytes` | Gauge | `dd_name`, `model`, `os_version` | Pre-dedup logical used |
 
-## Planned (design spec §5, not yet implemented)
+## Sizing & capacity forecasting (bounded `/backups`)
 
-`nsr_backup_*` + `nsr_job_bytes_per_second` + `nsr_job_duration_seconds`
-(sizing.go, bounded `/backups`).
+The `/backups` query is **bounded** by `collection.backupWindow` (default 24h) — the
+full catalog is never fetched (ADR-0010). The `q=` savetime syntax and `level`
+vocabulary are INFERRED (see `sizing.go`) pending live validation.
+
+| Metric | Type | Labels | Meaning |
+|---|---|---|---|
+| `nsr_backup_source_size_bytes` | Gauge | `client`, `saveset_name`, `level="Full"` | FETB — largest Full per saveset |
+| `nsr_backup_change_size_bytes` | Gauge | `client`, `saveset_name`, `level="Incr"` | Largest incremental change |
+| `nsr_backup_retention_seconds` | Gauge | `client`, `saveset_name`, `pool` | Retention period (retentionTime−saveTime) |
+| `nsr_job_duration_seconds` | Gauge | `client`, `job_name` | Elapsed backup time (when present) |
+| `nsr_job_bytes_per_second` | Gauge | `client`, `job_name` | Ingest throughput — aggregate with `sum`/`avg`, **never `rate()`** |

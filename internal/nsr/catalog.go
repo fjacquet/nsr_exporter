@@ -39,6 +39,11 @@ func Catalog() []MetricMeta {
 		{"nsr_datadomain_capacity_used_bytes", "Data Domain physical capacity used.", models.Gauge},
 		{"nsr_datadomain_capacity_available_bytes", "Data Domain free space.", models.Gauge},
 		{"nsr_datadomain_logical_capacity_used_bytes", "Pre-deduplication size stored on target.", models.Gauge},
+		{"nsr_backup_source_size_bytes", "FETB: largest Full backup per client/saveset.", models.Gauge},
+		{"nsr_backup_change_size_bytes", "Largest incremental change per client/saveset.", models.Gauge},
+		{"nsr_backup_retention_seconds", "Retention period of a save set (seconds).", models.Gauge},
+		{"nsr_job_duration_seconds", "Elapsed backup time for a save set.", models.Gauge},
+		{"nsr_job_bytes_per_second", "Ingest throughput of a backup action.", models.Gauge},
 	}
 }
 

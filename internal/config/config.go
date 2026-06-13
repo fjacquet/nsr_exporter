@@ -32,6 +32,9 @@ type ServerConfig struct {
 type CollectionConfig struct {
 	Interval time.Duration `yaml:"interval"`
 	Timeout  time.Duration `yaml:"timeout"`
+	// BackupWindow bounds the /backups sizing query (ADR-0010): only save sets with
+	// saveTime within this lookback are fetched, so the full catalog is never pulled.
+	BackupWindow time.Duration `yaml:"backupWindow"`
 }
 
 // SystemConfig is one NetWorker server target. A single exporter process serves
@@ -104,6 +107,9 @@ func (c *Config) applyDefaults() error {
 	}
 	if c.Collection.Timeout == 0 {
 		c.Collection.Timeout = 60 * time.Second
+	}
+	if c.Collection.BackupWindow == 0 {
+		c.Collection.BackupWindow = 24 * time.Hour
 	}
 	// Resolve passwordFile into Password where set.
 	for i := range c.Systems {

@@ -63,15 +63,23 @@ func mockNetWorker(t *testing.T) *httptest.Server {
 	mux.HandleFunc("/nwrestapi/v3/global/datadomainsystems", func(w http.ResponseWriter, _ *http.Request) {
 		json(w, `{"count":1,"datadomainsystems":[{"name":"dd01","model":"DD9400","osVersion":"7.10","capacityTotal":9000,"capacityUsed":3000,"capacityAvailable":6000,"logicalCapacityUsed":27000}]}`)
 	})
+	mux.HandleFunc("/nwrestapi/v3/global/backups", func(w http.ResponseWriter, _ *http.Request) {
+		json(w, `{"count":3,"backups":[
+			{"client":"app01","name":"/data","level":"full","size":1000,"saveTime":"2026-06-12T01:00:00Z","retentionTime":"2026-07-12T01:00:00Z","pool":"Default","duration":100},
+			{"client":"app01","name":"/data","level":"full","size":1500,"saveTime":"2026-06-13T01:00:00Z","retentionTime":"2026-07-13T01:00:00Z","pool":"Default"},
+			{"client":"app01","name":"/data","level":"incr","size":50,"saveTime":"2026-06-13T13:00:00Z","retentionTime":"2026-06-20T13:00:00Z","pool":"Default"}
+		]}`)
+	})
 	return httptest.NewServer(mux)
 }
 
 func testCollector(srv *httptest.Server) (*Collector, *SnapshotStore) {
 	client := nsrclient.New(nsrclient.Options{Name: "nsr-test", Host: srv.URL, Username: "u", Password: "p"})
 	store := NewSnapshotStore()
+	collectors := append(DefaultCollectors(), SizingCollector{Window: 24 * time.Hour, Now: nowZero})
 	c := &Collector{
 		systems:    []system{{name: "nsr-test", client: client}},
-		collectors: DefaultCollectors(),
+		collectors: collectors,
 		store:      store,
 		timeout:    5 * time.Second,
 		log:        testLogger(),
@@ -194,6 +202,43 @@ func TestStorageCollector(t *testing.T) {
 	}
 	if !familyHasLabel(fams, "nsr_datadomain_capacity_used_bytes", "model", "DD9400") {
 		t.Fatal("nsr_datadomain_capacity_used_bytes missing model=DD9400")
+	}
+}
+
+// TestSizingCollector covers the FETB max-per-saveset aggregation, the Full/Incr
+// bucketing, and the duration-gated throughput metric.
+func TestSizingCollector(t *testing.T) {
+	srv := mockNetWorker(t)
+	defer srv.Close()
+	c, store := testCollector(srv)
+	c.CollectOnce(context.Background())
+
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(NewPromCollector(store))
+	fams, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather: %v", err)
+	}
+	// Two Full backups (1000, 1500) → FETB is the max, 1500.
+	if got := familyValue(fams, "nsr_backup_source_size_bytes"); got != 1500 {
+		t.Fatalf("nsr_backup_source_size_bytes = %v, want 1500 (max Full)", got)
+	}
+	if got := familyValue(fams, "nsr_backup_change_size_bytes"); got != 50 {
+		t.Fatalf("nsr_backup_change_size_bytes = %v, want 50 (the Incr)", got)
+	}
+	// Only the first Full carries duration=100 → throughput 1000/100 = 10.
+	if got := familyValue(fams, "nsr_job_bytes_per_second"); got != 10 {
+		t.Fatalf("nsr_job_bytes_per_second = %v, want 10", got)
+	}
+}
+
+// TestBackupWindowFilter pins the bounding-filter shape so a live-validation fix is
+// an obvious one-line change.
+func TestBackupWindowFilter(t *testing.T) {
+	got := backupWindowFilter(time.Date(2026, 6, 13, 0, 0, 0, 0, time.UTC), 24*time.Hour)
+	want := "savetime>'06/12/2026 00:00:00'"
+	if got != want {
+		t.Fatalf("backupWindowFilter = %q, want %q", got, want)
 	}
 }
 
