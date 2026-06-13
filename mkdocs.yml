@@ -23,6 +23,9 @@ theme:
 nav:
   - Home: index.md
   - Metrics: metrics.md
+  - Dashboards: dashboards.md
+  - Deployment:
+      - Docker: deployment/docker.md
   - Architecture Decisions:
       - Overview: adr/index.md
       - 0001 Snapshot model: adr/0001-snapshot-collection-model.md

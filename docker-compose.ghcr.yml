@@ -1,0 +1,79 @@
+---
+# Pull-based stack: runs the published GHCR image instead of building locally.
+#
+#   NSR1_PASSWORD='your-monitor-password' docker compose -f docker-compose.ghcr.yml up -d
+#
+# Pin a version with NSR_TAG (defaults to :latest):
+#   NSR_TAG=0.2.0 NSR1_PASSWORD='...' docker compose -f docker-compose.ghcr.yml up -d
+#
+# Refresh images later with:  docker compose -f docker-compose.ghcr.yml pull
+#
+# mocknw is still built locally — there is no published mock image; it exists only
+# for this demo so the dashboards populate without real hardware.
+services:
+  mocknw:
+    build:
+      context: .
+      dockerfile: cmd/mocknw/Dockerfile
+    image: nsr_mocknw
+    pull_policy: build
+    container_name: nsr_mocknw
+    restart: unless-stopped
+
+  nsr_exporter:
+    image: ghcr.io/fjacquet/nsr_exporter:${NSR_TAG:-latest}
+    container_name: nsr_exporter
+    command: ["--config", "/etc/nsr_exporter/config.yaml"]
+    ports:
+      - "9097:9097"
+    volumes:
+      - ./config.demo.yaml:/etc/nsr_exporter/config.yaml:ro
+    environment:
+      # Provide NetWorker credentials via the environment (referenced in config.yaml).
+      - NSR1_USERNAME=${NSR1_USERNAME:-admin}
+      - NSR1_PASSWORD=${NSR1_PASSWORD:-demopass}
+    depends_on:
+      - mocknw
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: nsr_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/prometheus:/etc/prometheus/rules:ro
+    depends_on:
+      - nsr_exporter
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: nsr_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      # Test-stack credentials — change for anything non-local.
+      - GF_SECURITY_ADMIN_USER=${GF_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      # Datasource + dashboard providers (auto-provisioned on startup).
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      # Bundled dashboards; subdirectories become Grafana folders.
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # Optional: receives the OTLP metric push when opentelemetry.metrics is enabled.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: nsr_otel_collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317" # OTLP gRPC
+      - "8889:8889" # collector-exposed Prometheus metrics

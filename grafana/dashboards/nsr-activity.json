@@ -1,0 +1,288 @@
+{
+  "title": "NetWorker — Live Activity",
+  "uid": "nsr-activity",
+  "tags": ["networker", "nsr_exporter", "dell", "backup", "sessions", "activity"],
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "30s",
+  "timezone": "browser",
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 0,
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0
+      },
+      {
+        "name": "system",
+        "label": "NetWorker System",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(nsr_up, system)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Active Sessions",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "title": "Total Active Sessions",
+      "type": "stat",
+      "description": "Sum of nsr_sessions_total across all session types.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": { "mode": "fixed", "fixedColor": "blue" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (system) (nsr_sessions_total{system=~\"$system\"})",
+          "legendFormat": "{{system}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Sessions by Type",
+      "type": "bargauge",
+      "description": "nsr_sessions_total broken down by session_type (backup / recover / clone / etc.).",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 9, "x": 6, "y": 1 },
+      "options": { "orientation": "horizontal", "displayMode": "basic" },
+      "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (session_type) (nsr_sessions_total{system=~\"$system\"})",
+          "legendFormat": "{{session_type}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Total Bytes In-Flight",
+      "type": "stat",
+      "description": "Sum of nsr_session_bytes across all active sessions — instantaneous gauge, do NOT use rate().",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 9, "x": 15, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": { "mode": "fixed", "fixedColor": "green" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (system) (nsr_session_bytes{system=~\"$system\"})",
+          "legendFormat": "{{system}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Active Session Count Over Time",
+      "type": "timeseries",
+      "description": "How many sessions of each type are active at each scrape.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 5 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15 }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (session_type, system) (nsr_sessions_total{system=~\"$system\"})",
+          "legendFormat": "{{session_type}} / {{system}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Bytes In-Flight Over Time",
+      "type": "timeseries",
+      "description": "Total bytes moved by in-flight sessions — instantaneous gauge, NOT a rate.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 13 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (session_type, system) (nsr_session_bytes{system=~\"$system\"})",
+          "legendFormat": "{{session_type}} / {{system}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "row",
+      "title": "Clients",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 }
+    },
+    {
+      "id": 8,
+      "title": "Client Parallelism",
+      "type": "bargauge",
+      "description": "nsr_client_parallelism — configured backup stream limit per client. Absent when not set (never 0).",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
+      "options": { "orientation": "horizontal", "displayMode": "gradient" },
+      "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_client_parallelism{system=~\"$system\"}",
+          "legendFormat": "{{client_name}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Client Inventory Table",
+      "type": "table",
+      "description": "nsr_client_info — all configured clients with metadata.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Time" },
+            "properties": [ { "id": "custom.hidden", "value": true } ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [ { "id": "custom.hidden", "value": true } ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_client_info{system=~\"$system\"}",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        { "id": "merge", "options": {} },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "__name__": true, "job": true, "instance": true },
+            "renameByName": {
+              "client_name": "Client",
+              "ndmp": "NDMP",
+              "scheduled_backup": "Scheduled",
+              "backup_command": "Backup Command",
+              "system": "System"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Active Alerts Detail",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 30 }
+    },
+    {
+      "id": 11,
+      "title": "Alerts by Severity",
+      "type": "bargauge",
+      "description": "nsr_alerts_total — count of active alerts grouped by severity.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 31 },
+      "options": { "orientation": "horizontal", "displayMode": "basic" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red",    "value": 5 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (severity) (nsr_alerts_total{system=~\"$system\"})",
+          "legendFormat": "{{severity}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Alert Trend Over Time",
+      "type": "timeseries",
+      "description": "Count of active alerts over time, grouped by severity.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 6, "w": 16, "x": 8, "y": 31 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (severity, system) (nsr_alerts_total{system=~\"$system\"})",
+          "legendFormat": "{{severity}} / {{system}}"
+        }
+      ]
+    }
+  ]
+}
