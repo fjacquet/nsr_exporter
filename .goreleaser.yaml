@@ -45,10 +45,13 @@ homebrew_casks:
     repository:
       owner: fjacquet
       name: homebrew-tap
-      token: '{{ index .Env "HOMEBREW_TAP_GITHUB_TOKEN" }}'
-    # Self-skip when the cross-repo token is absent so releases don't break before
-    # the tap exists (the default GITHUB_TOKEN cannot push to another repo). Use
-    # index, not .Env.KEY field access, so a missing key yields "" instead of an error.
+      token: '{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}'
+    # The cask repository token MUST be a plain {{ .Env.VAR }} field reference — the
+    # {{ index .Env "VAR" }} form fails GoReleaser's publish-time validation
+    # ("homebrew cask: expected {{ .Env.VAR_NAME }} only"). Self-skip when the cross-repo
+    # token is absent is handled by skip_upload below (the default GITHUB_TOKEN cannot push
+    # to another repo); when skip_upload is true GoReleaser never resolves the token, so a
+    # missing var stays safe.
     skip_upload: '{{ if index .Env "HOMEBREW_TAP_GITHUB_TOKEN" }}false{{ else }}true{{ end }}'
     homepage: https://github.com/fjacquet/nsr_exporter
     description: Prometheus + OTLP exporter for Dell EMC NetWorker
