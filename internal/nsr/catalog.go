@@ -48,6 +48,25 @@ func Catalog() []MetricMeta {
 		{"nsr_backup_retention_seconds", "Retention period of a save set (seconds).", models.Gauge},
 		{"nsr_job_duration_seconds", "Elapsed backup time for a save set.", models.Gauge},
 		{"nsr_job_bytes_per_second", "Ingest throughput of a backup action.", models.Gauge},
+		// C5 — devices
+		{"nsr_device_info", "A NetWorker backup device (always 1).", models.Gauge},
+		{"nsr_device_capacity_bytes", "Device storage capacity in bytes.", models.Gauge},
+		// C6 — storagenodes
+		{"nsr_storagenode_info", "A NetWorker storage node (always 1).", models.Gauge},
+		{"nsr_storagenode_device_count", "Number of devices attached to this storage node.", models.Gauge},
+		// C7 — pools
+		{"nsr_pool_capacity_bytes", "Total pool capacity in bytes.", models.Gauge},
+		{"nsr_pool_used_bytes", "Used pool capacity in bytes.", models.Gauge},
+		{"nsr_pool_volume_count", "Number of volumes in the pool.", models.Gauge},
+		// C8 — vmware
+		{"nsr_vmware_info", "A registered VMware vCenter (always 1).", models.Gauge},
+		// C9 — queues
+		{"nsr_queue_depth", "Number of pending items in the queue.", models.Gauge},
+		{"nsr_queue_wait_seconds", "Current wait time in the queue (seconds).", models.Gauge},
+		// C10 — policies
+		{"nsr_policy_enabled", "1 if the protection policy is enabled, else 0.", models.Gauge},
+		{"nsr_policy_client_count", "Number of clients covered by this policy.", models.Gauge},
+		{"nsr_group_client_count", "Number of clients in this protection group.", models.Gauge},
 	}
 }
 

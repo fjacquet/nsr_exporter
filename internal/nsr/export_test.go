@@ -63,6 +63,27 @@ func mockNetWorker(t *testing.T) *httptest.Server {
 	mux.HandleFunc("/nwrestapi/v3/global/datadomainsystems", func(w http.ResponseWriter, _ *http.Request) {
 		json(w, `{"count":1,"datadomainsystems":[{"name":"dd01","model":"DD9400","osVersion":"7.10","capacityTotal":9000,"capacityUsed":3000,"capacityAvailable":6000,"logicalCapacityUsed":27000}]}`)
 	})
+	mux.HandleFunc("/nwrestapi/v3/global/devices", func(w http.ResponseWriter, _ *http.Request) {
+		json(w, `{"count":1,"devices":[{"name":"tape01","type":"tape","status":"enabled","serialNumber":"SN001","capacity":1099511627776}]}`)
+	})
+	mux.HandleFunc("/nwrestapi/v3/global/storagenodes", func(w http.ResponseWriter, _ *http.Request) {
+		json(w, `{"count":1,"storagenodes":[{"name":"sn01.local","status":"enabled","deviceCount":4}]}`)
+	})
+	mux.HandleFunc("/nwrestapi/v3/global/pools", func(w http.ResponseWriter, _ *http.Request) {
+		json(w, `{"count":1,"pools":[{"name":"Default","type":"Backup","capacityTotal":5497558138880,"capacityUsed":2748779069440,"volumeCount":10}]}`)
+	})
+	mux.HandleFunc("/nwrestapi/v3/global/vmwares", func(w http.ResponseWriter, _ *http.Request) {
+		json(w, `{"count":1,"vmwares":[{"name":"vcenter.local","version":"7.0.3","connectionStatus":"connected"}]}`)
+	})
+	mux.HandleFunc("/nwrestapi/v3/global/queues", func(w http.ResponseWriter, _ *http.Request) {
+		json(w, `{"count":1,"queues":[{"name":"DefaultQueue","depth":5,"waitTime":30}]}`)
+	})
+	mux.HandleFunc("/nwrestapi/v3/global/protectionpolicies", func(w http.ResponseWriter, _ *http.Request) {
+		json(w, `{"count":1,"protectionpolicies":[{"name":"GoldPolicy","enabled":true,"clientCount":10}]}`)
+	})
+	mux.HandleFunc("/nwrestapi/v3/global/protectiongroups", func(w http.ResponseWriter, _ *http.Request) {
+		json(w, `{"count":1,"protectiongroups":[{"name":"DBGroup","policy":"GoldPolicy","clientCount":5}]}`)
+	})
 	mux.HandleFunc("/nwrestapi/v3/global/backups", func(w http.ResponseWriter, _ *http.Request) {
 		json(w, `{"count":3,"backups":[
 			{"client":"app01","name":"/data","level":"full","size":1000,"saveTime":"2026-06-12T01:00:00Z","retentionTime":"2026-07-12T01:00:00Z","pool":"Default","duration":100},
@@ -382,6 +403,221 @@ func TestJobsCollector_C3(t *testing.T) {
 	}
 	if got := otlpValue(&rm, "nsr_job_end_timestamp_seconds"); got <= 0 {
 		t.Fatalf("otlp nsr_job_end_timestamp_seconds = %v, want > 0", got)
+	}
+}
+
+// TestDevicesCollector_C5 asserts C5: nsr_device_info and nsr_device_capacity_bytes
+// via both Prometheus and OTLP paths.
+func TestDevicesCollector_C5(t *testing.T) {
+	srv := mockNetWorker(t)
+	defer srv.Close()
+	c, store := testCollector(srv)
+	c.CollectOnce(context.Background())
+
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(NewPromCollector(store))
+	fams, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather: %v", err)
+	}
+	if !familyHasLabel(fams, "nsr_device_info", "device_name", "tape01") {
+		t.Fatal("prometheus nsr_device_info missing device_name=tape01")
+	}
+	if got := familyValue(fams, "nsr_device_capacity_bytes"); got != 1099511627776 {
+		t.Fatalf("prometheus nsr_device_capacity_bytes = %v, want 1099511627776", got)
+	}
+
+	reader := sdkmetric.NewManualReader()
+	if _, err := NewOTLPExporter(store, reader); err != nil {
+		t.Fatalf("otlp: %v", err)
+	}
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(context.Background(), &rm); err != nil {
+		t.Fatalf("otlp collect: %v", err)
+	}
+	if got := otlpValue(&rm, "nsr_device_info"); got != 1 {
+		t.Fatalf("otlp nsr_device_info = %v, want 1", got)
+	}
+}
+
+// TestStorageNodesCollector_C6 asserts C6: nsr_storagenode_info and
+// nsr_storagenode_device_count via both Prometheus and OTLP paths.
+func TestStorageNodesCollector_C6(t *testing.T) {
+	srv := mockNetWorker(t)
+	defer srv.Close()
+	c, store := testCollector(srv)
+	c.CollectOnce(context.Background())
+
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(NewPromCollector(store))
+	fams, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather: %v", err)
+	}
+	if !familyHasLabel(fams, "nsr_storagenode_info", "node", "sn01.local") {
+		t.Fatal("prometheus nsr_storagenode_info missing node=sn01.local")
+	}
+	if got := familyValue(fams, "nsr_storagenode_device_count"); got != 4 {
+		t.Fatalf("prometheus nsr_storagenode_device_count = %v, want 4", got)
+	}
+
+	reader := sdkmetric.NewManualReader()
+	if _, err := NewOTLPExporter(store, reader); err != nil {
+		t.Fatalf("otlp: %v", err)
+	}
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(context.Background(), &rm); err != nil {
+		t.Fatalf("otlp collect: %v", err)
+	}
+	if got := otlpValue(&rm, "nsr_storagenode_device_count"); got != 4 {
+		t.Fatalf("otlp nsr_storagenode_device_count = %v, want 4", got)
+	}
+}
+
+// TestPoolsCollector_C7 asserts C7: nsr_pool_capacity_bytes, nsr_pool_used_bytes,
+// nsr_pool_volume_count via both Prometheus and OTLP paths.
+func TestPoolsCollector_C7(t *testing.T) {
+	srv := mockNetWorker(t)
+	defer srv.Close()
+	c, store := testCollector(srv)
+	c.CollectOnce(context.Background())
+
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(NewPromCollector(store))
+	fams, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather: %v", err)
+	}
+	if got := familyValue(fams, "nsr_pool_capacity_bytes"); got != 5497558138880 {
+		t.Fatalf("prometheus nsr_pool_capacity_bytes = %v, want 5497558138880", got)
+	}
+	if got := familyValue(fams, "nsr_pool_used_bytes"); got != 2748779069440 {
+		t.Fatalf("prometheus nsr_pool_used_bytes = %v, want 2748779069440", got)
+	}
+	if got := familyValue(fams, "nsr_pool_volume_count"); got != 10 {
+		t.Fatalf("prometheus nsr_pool_volume_count = %v, want 10", got)
+	}
+
+	reader := sdkmetric.NewManualReader()
+	if _, err := NewOTLPExporter(store, reader); err != nil {
+		t.Fatalf("otlp: %v", err)
+	}
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(context.Background(), &rm); err != nil {
+		t.Fatalf("otlp collect: %v", err)
+	}
+	if got := otlpValue(&rm, "nsr_pool_capacity_bytes"); got != 5497558138880 {
+		t.Fatalf("otlp nsr_pool_capacity_bytes = %v, want 5497558138880", got)
+	}
+}
+
+// TestVMwareCollector_C8 asserts C8: nsr_vmware_info via both Prometheus and OTLP.
+func TestVMwareCollector_C8(t *testing.T) {
+	srv := mockNetWorker(t)
+	defer srv.Close()
+	c, store := testCollector(srv)
+	c.CollectOnce(context.Background())
+
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(NewPromCollector(store))
+	fams, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather: %v", err)
+	}
+	if !familyHasLabel(fams, "nsr_vmware_info", "vcenter", "vcenter.local") {
+		t.Fatal("prometheus nsr_vmware_info missing vcenter=vcenter.local")
+	}
+	if !familyHasLabel(fams, "nsr_vmware_info", "status", "connected") {
+		t.Fatal("prometheus nsr_vmware_info missing status=connected")
+	}
+
+	reader := sdkmetric.NewManualReader()
+	if _, err := NewOTLPExporter(store, reader); err != nil {
+		t.Fatalf("otlp: %v", err)
+	}
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(context.Background(), &rm); err != nil {
+		t.Fatalf("otlp collect: %v", err)
+	}
+	if got := otlpValue(&rm, "nsr_vmware_info"); got != 1 {
+		t.Fatalf("otlp nsr_vmware_info = %v, want 1", got)
+	}
+}
+
+// TestQueuesCollector_C9 asserts C9: nsr_queue_depth and nsr_queue_wait_seconds
+// via both Prometheus and OTLP paths.
+func TestQueuesCollector_C9(t *testing.T) {
+	srv := mockNetWorker(t)
+	defer srv.Close()
+	c, store := testCollector(srv)
+	c.CollectOnce(context.Background())
+
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(NewPromCollector(store))
+	fams, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather: %v", err)
+	}
+	if got := familyValue(fams, "nsr_queue_depth"); got != 5 {
+		t.Fatalf("prometheus nsr_queue_depth = %v, want 5", got)
+	}
+	if got := familyValue(fams, "nsr_queue_wait_seconds"); got != 30 {
+		t.Fatalf("prometheus nsr_queue_wait_seconds = %v, want 30", got)
+	}
+
+	reader := sdkmetric.NewManualReader()
+	if _, err := NewOTLPExporter(store, reader); err != nil {
+		t.Fatalf("otlp: %v", err)
+	}
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(context.Background(), &rm); err != nil {
+		t.Fatalf("otlp collect: %v", err)
+	}
+	if got := otlpValue(&rm, "nsr_queue_depth"); got != 5 {
+		t.Fatalf("otlp nsr_queue_depth = %v, want 5", got)
+	}
+}
+
+// TestPoliciesCollector_C10 asserts C10: nsr_policy_enabled, nsr_policy_client_count,
+// nsr_group_client_count via both Prometheus and OTLP paths.
+func TestPoliciesCollector_C10(t *testing.T) {
+	srv := mockNetWorker(t)
+	defer srv.Close()
+	c, store := testCollector(srv)
+	c.CollectOnce(context.Background())
+
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(NewPromCollector(store))
+	fams, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather: %v", err)
+	}
+	if !familyHasLabel(fams, "nsr_policy_enabled", "policy", "GoldPolicy") {
+		t.Fatal("prometheus nsr_policy_enabled missing policy=GoldPolicy")
+	}
+	if got := familyValue(fams, "nsr_policy_enabled"); got != 1 {
+		t.Fatalf("prometheus nsr_policy_enabled = %v, want 1 (GoldPolicy is enabled)", got)
+	}
+	if got := familyValue(fams, "nsr_policy_client_count"); got != 10 {
+		t.Fatalf("prometheus nsr_policy_client_count = %v, want 10", got)
+	}
+	if got := familyValue(fams, "nsr_group_client_count"); got != 5 {
+		t.Fatalf("prometheus nsr_group_client_count = %v, want 5", got)
+	}
+
+	reader := sdkmetric.NewManualReader()
+	if _, err := NewOTLPExporter(store, reader); err != nil {
+		t.Fatalf("otlp: %v", err)
+	}
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(context.Background(), &rm); err != nil {
+		t.Fatalf("otlp collect: %v", err)
+	}
+	if got := otlpValue(&rm, "nsr_policy_enabled"); got != 1 {
+		t.Fatalf("otlp nsr_policy_enabled = %v, want 1", got)
+	}
+	if got := otlpValue(&rm, "nsr_group_client_count"); got != 5 {
+		t.Fatalf("otlp nsr_group_client_count = %v, want 5", got)
 	}
 }
 

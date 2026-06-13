@@ -42,6 +42,31 @@ var fixtures = map[string]string{
 	"/datadomainsystems": `{"count":1,"datadomainsystems":[
 		{"name":"dd01.local","model":"DD9400","osVersion":"7.10.1.0","capacityTotal":98956046499840,"capacityUsed":32985348833280,"capacityAvailable":65970697666560,"logicalCapacityUsed":296868139499520}
 	]}`,
+	"/devices": `{"count":2,"devices":[
+		{"name":"tape01","type":"tape","status":"enabled","serialNumber":"SN001","capacity":1099511627776},
+		{"name":"adv01","type":"adv_file","status":"enabled","serialNumber":"SN002","capacity":10995116277760}
+	]}`,
+	"/storagenodes": `{"count":1,"storagenodes":[
+		{"name":"sn01.local","status":"enabled","deviceCount":4}
+	]}`,
+	"/pools": `{"count":2,"pools":[
+		{"name":"Default","type":"Backup","capacityTotal":5497558138880,"capacityUsed":2748779069440,"volumeCount":10},
+		{"name":"DataDomain","type":"Backup","capacityTotal":98956046499840,"capacityUsed":32985348833280,"volumeCount":50}
+	]}`,
+	"/vmwares": `{"count":1,"vmwares":[
+		{"name":"vcenter.local","version":"7.0.3","connectionStatus":"connected"}
+	]}`,
+	"/queues": `{"count":1,"queues":[
+		{"name":"DefaultQueue","depth":5,"waitTime":30}
+	]}`,
+	"/protectionpolicies": `{"count":2,"protectionpolicies":[
+		{"name":"GoldPolicy","enabled":true,"clientCount":10},
+		{"name":"SilverPolicy","enabled":false,"clientCount":5}
+	]}`,
+	"/protectiongroups": `{"count":2,"protectiongroups":[
+		{"name":"DBGroup","policy":"GoldPolicy","clientCount":5},
+		{"name":"AppGroup","policy":"GoldPolicy","clientCount":5}
+	]}`,
 	"/backups": `{"count":2,"backups":[
 		{"client":"app01.local","name":"/data","level":"full","size":536870912000,"saveTime":"2026-06-13T01:00:00Z","retentionTime":"2026-07-13T01:00:00Z","pool":"DataDomain","duration":1800},
 		{"client":"app01.local","name":"/data","level":"incr","size":10737418240,"saveTime":"2026-06-13T13:00:00Z","retentionTime":"2026-06-20T13:00:00Z","pool":"DataDomain","duration":120}
