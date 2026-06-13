@@ -36,8 +36,8 @@ var fixtures = map[string]string{
 		{"type":"backup","client":"app01.local","state":"running","size":104857600}
 	]}`,
 	"/volumes": `{"count":2,"volumes":[
-		{"name":"vol01","pool":"Default","mediaType":"adv_file","capacity":1099511627776,"written":659706976665,"recycledCount":3},
-		{"name":"vol02","pool":"DataDomain","mediaType":"Data Domain","capacity":5497558138880,"written":1099511627776,"recycledCount":0}
+		{"name":"vol01","pool":"Default","mediaType":"adv_file","status":"appendable","capacity":1099511627776,"written":659706976665,"recycledCount":3},
+		{"name":"vol02","pool":"DataDomain","mediaType":"Data Domain","status":"full","capacity":5497558138880,"written":1099511627776,"recycledCount":0}
 	]}`,
 	"/datadomainsystems": `{"count":1,"datadomainsystems":[
 		{"name":"dd01.local","model":"DD9400","osVersion":"7.10.1.0","capacityTotal":98956046499840,"capacityUsed":32985348833280,"capacityAvailable":65970697666560,"logicalCapacityUsed":296868139499520}

@@ -36,6 +36,7 @@ func Catalog() []MetricMeta {
 		{"nsr_volume_capacity_bytes", "Formatted volume capacity.", models.Gauge},
 		{"nsr_volume_written_bytes", "Bytes written to the volume.", models.Gauge},
 		{"nsr_volume_recycled_total", "Times the volume has been recycled.", models.Counter},
+		{"nsr_volume_status", "Volume status as an info gauge (always 1).", models.Gauge},
 		{"nsr_datadomain_capacity_total_bytes", "Target Data Domain total size.", models.Gauge},
 		{"nsr_datadomain_capacity_used_bytes", "Data Domain physical capacity used.", models.Gauge},
 		{"nsr_datadomain_capacity_available_bytes", "Data Domain free space.", models.Gauge},

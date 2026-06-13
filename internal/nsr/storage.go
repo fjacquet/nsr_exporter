@@ -16,6 +16,7 @@ type nwVolume struct {
 	Name     string   `json:"name"`          // INFERRED — validate live
 	Pool     string   `json:"pool"`          // INFERRED — validate live
 	Type     string   `json:"mediaType"`     // INFERRED — validate live (tape/disk)
+	Status   string   `json:"status"`        // INFERRED — validate live (appendable/full/recyclable)
 	Capacity *float64 `json:"capacity"`      // INFERRED — validate live
 	Written  *float64 `json:"written"`       // INFERRED — validate live
 	Recycled *float64 `json:"recycledCount"` // INFERRED — validate live
@@ -48,7 +49,7 @@ func (StorageCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]mod
 
 	var vols volumesResponse
 	if err := c.Get(ctx, "/volumes", nsrclient.QueryOpts{
-		Fields: []string{"name", "pool", "mediaType", "capacity", "written", "recycledCount"},
+		Fields: []string{"name", "pool", "mediaType", "status", "capacity", "written", "recycledCount"},
 	}, &vols); err != nil {
 		return nil, err
 	}
@@ -60,6 +61,14 @@ func (StorageCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]mod
 		if v.Recycled != nil {
 			b.counter("nsr_volume_recycled_total", "Times the volume has been recycled.", *v.Recycled,
 				lbl("volume_name", v.Name))
+		}
+		// nsr_volume_status is an info gauge (always 1); status absent → no sample.
+		if v.Status != "" {
+			b.gauge("nsr_volume_status", "Volume status as an info gauge (always 1).", 1,
+				lbl("volume_name", v.Name),
+				lbl("pool", v.Pool),
+				lbl("status", v.Status),
+			)
 		}
 	}
 

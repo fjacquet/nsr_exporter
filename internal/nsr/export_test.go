@@ -58,7 +58,7 @@ func mockNetWorker(t *testing.T) *httptest.Server {
 		json(w, `{"count":2,"sessions":[{"type":"backup","client":"app01","state":"running","size":2048},{"type":"backup","client":"db01","state":"running","size":4096}]}`)
 	})
 	mux.HandleFunc("/nwrestapi/v3/global/volumes", func(w http.ResponseWriter, _ *http.Request) {
-		json(w, `{"count":1,"volumes":[{"name":"vol01","pool":"Default","mediaType":"adv_file","capacity":1000,"written":600,"recycledCount":2}]}`)
+		json(w, `{"count":1,"volumes":[{"name":"vol01","pool":"Default","mediaType":"adv_file","status":"appendable","capacity":1000,"written":600,"recycledCount":2}]}`)
 	})
 	mux.HandleFunc("/nwrestapi/v3/global/datadomainsystems", func(w http.ResponseWriter, _ *http.Request) {
 		json(w, `{"count":1,"datadomainsystems":[{"name":"dd01","model":"DD9400","osVersion":"7.10","capacityTotal":9000,"capacityUsed":3000,"capacityAvailable":6000,"logicalCapacityUsed":27000}]}`)
@@ -229,6 +229,42 @@ func TestSizingCollector(t *testing.T) {
 	// Only the first Full carries duration=100 → throughput 1000/100 = 10.
 	if got := familyValue(fams, "nsr_job_bytes_per_second"); got != 10 {
 		t.Fatalf("nsr_job_bytes_per_second = %v, want 10", got)
+	}
+}
+
+// TestStorageCollector_C2 asserts the C2 addition: nsr_volume_status info gauge,
+// via both Prometheus and OTLP paths.
+func TestStorageCollector_C2(t *testing.T) {
+	srv := mockNetWorker(t)
+	defer srv.Close()
+	c, store := testCollector(srv)
+	c.CollectOnce(context.Background())
+
+	// Prometheus path
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(NewPromCollector(store))
+	fams, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather: %v", err)
+	}
+	if !familyHasLabel(fams, "nsr_volume_status", "status", "appendable") {
+		t.Fatal("prometheus nsr_volume_status missing status=appendable label")
+	}
+	if got := familyValue(fams, "nsr_volume_status"); got != 1 {
+		t.Fatalf("prometheus nsr_volume_status = %v, want 1", got)
+	}
+
+	// OTLP path
+	reader := sdkmetric.NewManualReader()
+	if _, err := NewOTLPExporter(store, reader); err != nil {
+		t.Fatalf("otlp: %v", err)
+	}
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(context.Background(), &rm); err != nil {
+		t.Fatalf("otlp collect: %v", err)
+	}
+	if got := otlpValue(&rm, "nsr_volume_status"); got != 1 {
+		t.Fatalf("otlp nsr_volume_status = %v, want 1", got)
 	}
 }
 
