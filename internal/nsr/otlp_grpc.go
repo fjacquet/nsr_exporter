@@ -1,4 +1,4 @@
-package main
+package nsr
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 )
 
-// otlpGRPCExporter builds the production OTLP/gRPC metric exporter. Endpoint and
+// NewGRPCExporter builds the production OTLP/gRPC metric exporter. Endpoint and
 // TLS are configured via the standard OTEL_EXPORTER_OTLP_* environment variables.
-func otlpGRPCExporter(ctx context.Context) (sdkmetric.Exporter, error) {
+func NewGRPCExporter(ctx context.Context) (sdkmetric.Exporter, error) {
 	return otlpmetricgrpc.New(ctx)
 }
