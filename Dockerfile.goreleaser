@@ -1,6 +1,6 @@
 # Release image: copies the prebuilt GoReleaser binary (no builder stage). Built in
 # CI with open egress, so apk is tolerated here. Non-root USER is mandatory.
-FROM alpine:3.21
+FROM alpine:3.24
 RUN apk add --no-cache ca-certificates && adduser -D -u 10001 nsr
 COPY nsr_exporter /usr/local/bin/nsr_exporter
 USER 10001

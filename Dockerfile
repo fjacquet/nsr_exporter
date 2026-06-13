@@ -9,7 +9,7 @@ COPY . .
 ARG VERSION=dev
 RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /out/nsr_exporter .
 
-FROM alpine:3.21
+FROM alpine:3.24
 # Copy the CA bundle from the Debian-based builder rather than `apk add
 # ca-certificates`: apk fetches the index over TLS from the Alpine CDN, which fails
 # behind a corporate MITM proxy because the bare alpine image has no CA bundle yet
