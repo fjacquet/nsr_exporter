@@ -54,6 +54,9 @@ func mockNetWorker(t *testing.T) *httptest.Server {
 	mux.HandleFunc("/nwrestapi/v3/global/jobs", func(w http.ResponseWriter, _ *http.Request) {
 		json(w, `{"count":1,"jobs":[{"id":42,"name":"daily","type":"save","state":"Completed","completionStatus":"Succeeded","client":"app01"}]}`)
 	})
+	mux.HandleFunc("/nwrestapi/v3/global/sessions", func(w http.ResponseWriter, _ *http.Request) {
+		json(w, `{"count":2,"sessions":[{"type":"backup","client":"app01","state":"running","size":2048},{"type":"backup","client":"db01","state":"running","size":4096}]}`)
+	})
 	return httptest.NewServer(mux)
 }
 
@@ -135,6 +138,28 @@ func TestJobsCollector(t *testing.T) {
 	}
 	if !familyHasLabel(fams, "nsr_job_status", "completion_status", "Succeeded") {
 		t.Fatal("nsr_job_status missing completion_status=Succeeded")
+	}
+}
+
+// TestSessionsCollector covers aggregation (sessions_total per type) and the
+// present-value gauge (session_bytes).
+func TestSessionsCollector(t *testing.T) {
+	srv := mockNetWorker(t)
+	defer srv.Close()
+	c, store := testCollector(srv)
+	c.CollectOnce(context.Background())
+
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(NewPromCollector(store))
+	fams, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather: %v", err)
+	}
+	if got := familyValue(fams, "nsr_sessions_total"); got != 2 {
+		t.Fatalf("nsr_sessions_total = %v, want 2 (both backup type)", got)
+	}
+	if !familyHasLabel(fams, "nsr_session_bytes", "client", "app01") {
+		t.Fatal("nsr_session_bytes missing client=app01")
 	}
 }
 

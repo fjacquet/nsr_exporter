@@ -68,7 +68,8 @@ func DefaultCollectors() []ResourceCollector {
 		AlertsCollector{},
 		ClientsCollector{},
 		JobsCollector{},
-		// sessions, storage, sizing collectors register here as they land.
+		SessionsCollector{},
+		// storage, sizing collectors register here as they land.
 	}
 }
 

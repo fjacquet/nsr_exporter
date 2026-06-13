@@ -43,8 +43,17 @@ Field names are INFERRED (see `jobs.go`) pending live validation.
 | `nsr_server_bad_recovers_total` | Counter | — | Cumulative failed recoveries |
 | `nsr_job_status` | Gauge (1) | `job_id`, `job_name`, `job_type`, `state`, `completion_status`, `client` | An individual job |
 
+## Live sessions (`/sessions`)
+
+Field names are INFERRED (see `sessions.go`) pending live validation.
+
+| Metric | Type | Labels | Meaning |
+|---|---|---|---|
+| `nsr_session_active` | Gauge (1) | `session_type`, `client`, `state` | An active session |
+| `nsr_session_bytes` | Gauge | `session_type`, `client` | Bytes moved so far (absent if unknown) |
+| `nsr_sessions_total` | Gauge | `session_type` | Count of active sessions by type |
+
 ## Planned (design spec §5, not yet implemented)
 
-`nsr_session_*` (sessions.go) · `nsr_volume_*` + `nsr_datadomain_*` (storage.go) ·
-`nsr_backup_*` + `nsr_job_bytes_per_second` + `nsr_job_duration_seconds`
-(sizing.go, bounded `/backups`).
+`nsr_volume_*` + `nsr_datadomain_*` (storage.go) · `nsr_backup_*` +
+`nsr_job_bytes_per_second` + `nsr_job_duration_seconds` (sizing.go, bounded `/backups`).
