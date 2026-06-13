@@ -138,7 +138,7 @@ func setupOTLP(store *nsr.SnapshotStore, log *logrus.Logger) func() {
 		return func() {}
 	}
 	ctx := context.Background()
-	exp, err := otlpGRPCExporter(ctx)
+	exp, err := nsr.NewGRPCExporter(ctx)
 	if err != nil {
 		log.WithError(err).Warn("OTLP endpoint set but exporter init failed; continuing Prometheus-only")
 		return func() {}
