@@ -87,7 +87,7 @@ func run(cfgPath string, debug, once, trace bool) error {
 	reg.MustRegister(nsr.NewPromCollector(store))
 
 	// OTLP export path (push) only when an endpoint is configured.
-	otlpShutdown := setupOTLP(store, log)
+	otlpShutdown := setupOTLP(cfg, store, log)
 	defer otlpShutdown()
 
 	// Serve HTTP BEFORE the first collection cycle: the first poll can exceed the
@@ -131,10 +131,16 @@ func newServer(cfg *config.Config, store *nsr.SnapshotStore, reg *prometheus.Reg
 	}
 }
 
-// setupOTLP wires the OTLP push path when OTEL_EXPORTER_OTLP_ENDPOINT is set;
-// otherwise it is a no-op so the exporter runs Prometheus-only out of the box.
-func setupOTLP(store *nsr.SnapshotStore, log *logrus.Logger) func() {
-	if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") == "" {
+// setupOTLP wires the OTLP push path when an endpoint is configured. The endpoint
+// is resolved from cfg.OpenTelemetry.Endpoint first; OTEL_EXPORTER_OTLP_ENDPOINT
+// env var takes precedence (standard OTEL SDK convention) when set.
+// If neither is set, OTLP is disabled and the exporter runs Prometheus-only.
+func setupOTLP(cfg *config.Config, store *nsr.SnapshotStore, log *logrus.Logger) func() {
+	endpoint := cfg.OpenTelemetry.Endpoint
+	if env := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); env != "" {
+		endpoint = env // env var overrides config (OTEL SDK convention)
+	}
+	if endpoint == "" {
 		return func() {}
 	}
 	ctx := context.Background()
@@ -143,13 +149,13 @@ func setupOTLP(store *nsr.SnapshotStore, log *logrus.Logger) func() {
 		log.WithError(err).Warn("OTLP endpoint set but exporter init failed; continuing Prometheus-only")
 		return func() {}
 	}
-	reader := sdkmetric.NewPeriodicReader(exp, sdkmetric.WithInterval(30*time.Second))
+	reader := sdkmetric.NewPeriodicReader(exp, sdkmetric.WithInterval(cfg.OpenTelemetry.PushInterval))
 	otlp, err := nsr.NewOTLPExporter(store, reader)
 	if err != nil {
 		log.WithError(err).Warn("OTLP exporter wiring failed; continuing Prometheus-only")
 		return func() {}
 	}
-	log.Info("OTLP push export enabled")
+	log.WithField("endpoint", endpoint).WithField("interval", cfg.OpenTelemetry.PushInterval).Info("OTLP push export enabled")
 	return func() { _ = otlp.Shutdown(context.Background()) }
 }
 
