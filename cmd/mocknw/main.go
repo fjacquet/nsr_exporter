@@ -25,7 +25,7 @@ var fixtures = map[string]string{
 		{"hostname":"db01.local","ndmp":true,"scheduledBackup":true,"backupCommand":"nsrndmp_save","parallelism":12,"lastBackupTime":"2026-06-13T02:00:00Z","operatingSystem":"Windows"}
 	]}`,
 	"/alerts": `{"count":1,"alerts":[
-		{"severity":"WARNING","category":"Server","message":"Index size threshold exceeded","time":"2026-06-13T08:00:00Z"}
+		{"severity":"WARNING","category":"Server","message":"Index size threshold exceeded","time":"2026-06-13T08:00:00Z","acknowledged":false}
 	]}`,
 	"/serverstatistics": `{"upSince":"2026-06-13T00:00:00Z","saves":12000,"saveSize":987654321,"recovers":42,"recoverSize":1234567,"badSaves":7,"badRecovers":1}`,
 	"/jobs": `{"count":2,"jobs":[

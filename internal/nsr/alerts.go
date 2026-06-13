@@ -2,6 +2,7 @@ package nsr
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/fjacquet/nsr_exporter/internal/models"
 	"github.com/fjacquet/nsr_exporter/internal/nsrclient"
@@ -13,10 +14,11 @@ type alertsResponse struct {
 }
 
 type nwAlert struct {
-	Severity string `json:"severity"`
-	Category string `json:"category"`
-	Message  string `json:"message"`
-	Time     string `json:"time"`
+	Severity     string `json:"severity"`
+	Category     string `json:"category"`
+	Message      string `json:"message"`
+	Time         string `json:"time"`
+	Acknowledged bool   `json:"acknowledged"` // INFERRED — validate live
 }
 
 // AlertsCollector maps GET /alerts to active-alert metrics.
@@ -29,7 +31,7 @@ func (AlertsCollector) Name() string { return "alerts" }
 func (AlertsCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]models.Sample, error) {
 	var resp alertsResponse
 	err := c.Get(ctx, "/alerts", nsrclient.QueryOpts{
-		Fields: []string{"severity", "category", "message", "time"},
+		Fields: []string{"severity", "category", "message", "time", "acknowledged"},
 	}, &resp)
 	if err != nil {
 		return nil, err
@@ -43,6 +45,7 @@ func (AlertsCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]mode
 			lbl("category", a.Category),
 			lbl("message", a.Message),
 			lbl("timestamp", a.Time),
+			lbl("acknowledged", strconv.FormatBool(a.Acknowledged)),
 		)
 		bySeverity[a.Severity]++
 	}

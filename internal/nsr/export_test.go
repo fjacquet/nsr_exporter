@@ -46,7 +46,7 @@ func mockNetWorker(t *testing.T) *httptest.Server {
 		json(w, `{"count":1,"clients":[{"hostname":"app01","ndmp":false,"scheduledBackup":true,"backupCommand":"save","parallelism":4,"lastBackupTime":"2026-06-13T01:00:00Z","operatingSystem":"Linux"}]}`)
 	})
 	mux.HandleFunc("/nwrestapi/v3/global/alerts", func(w http.ResponseWriter, _ *http.Request) {
-		json(w, `{"count":1,"alerts":[{"severity":"WARNING","category":"Server","message":"m","time":"t"}]}`)
+		json(w, `{"count":1,"alerts":[{"severity":"WARNING","category":"Server","message":"m","time":"t","acknowledged":false}]}`)
 	})
 	mux.HandleFunc("/nwrestapi/v3/global/serverstatistics", func(w http.ResponseWriter, _ *http.Request) {
 		json(w, `{"upSince":"2026-06-13T00:00:00Z","saves":1000,"saveSize":5000000,"recovers":10,"recoverSize":2000,"badSaves":3,"badRecovers":1}`)
@@ -303,6 +303,39 @@ func TestClientsCollector_C1(t *testing.T) {
 	}
 	if got := otlpValue(&rm, "nsr_client_last_backup_timestamp_seconds"); got <= 0 {
 		t.Fatalf("otlp nsr_client_last_backup_timestamp_seconds = %v, want > 0", got)
+	}
+}
+
+// TestAlertsCollector_C4 asserts the C4 addition: acknowledged label on nsr_alert_info,
+// via both Prometheus and OTLP paths.
+func TestAlertsCollector_C4(t *testing.T) {
+	srv := mockNetWorker(t)
+	defer srv.Close()
+	c, store := testCollector(srv)
+	c.CollectOnce(context.Background())
+
+	// Prometheus path
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(NewPromCollector(store))
+	fams, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather: %v", err)
+	}
+	if !familyHasLabel(fams, "nsr_alert_info", "acknowledged", "false") {
+		t.Fatal("prometheus nsr_alert_info missing acknowledged=false label")
+	}
+
+	// OTLP path
+	reader := sdkmetric.NewManualReader()
+	if _, err := NewOTLPExporter(store, reader); err != nil {
+		t.Fatalf("otlp: %v", err)
+	}
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(context.Background(), &rm); err != nil {
+		t.Fatalf("otlp collect: %v", err)
+	}
+	if got := otlpValue(&rm, "nsr_alert_info"); got != 1 {
+		t.Fatalf("otlp nsr_alert_info = %v, want 1", got)
 	}
 }
 
