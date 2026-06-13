@@ -1,0 +1,44 @@
+site_name: nsr_exporter
+site_description: Prometheus + OTLP exporter for Dell EMC NetWorker
+repo_url: https://github.com/fjacquet/nsr_exporter
+repo_name: fjacquet/nsr_exporter
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Metrics: metrics.md
+  - Architecture Decisions:
+      - Overview: adr/index.md
+      - 0001 Snapshot model: adr/0001-snapshot-collection-model.md
+      - 0003 Hand-rolled client: adr/0003-hand-rolled-rest-client.md
+      - 0007 HTTP Basic auth: adr/0007-http-basic-auth.md
+      - 0010 /backups bounding: adr/0010-backups-bounding.md
+
+# Keep working notes and the reference PDFs out of the published site so
+# `mkdocs build --strict` doesn't fail on pages that aren't part of the nav.
+exclude_docs: |
+  brainstorm/
+  superpowers/
+  *.pdf
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - tables
