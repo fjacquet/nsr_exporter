@@ -1,0 +1,294 @@
+{
+  "title": "NetWorker — Capacity",
+  "uid": "nsr-capacity",
+  "tags": ["networker", "nsr_exporter", "dell", "backup", "capacity"],
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "5m",
+  "timezone": "browser",
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 0,
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0
+      },
+      {
+        "name": "system",
+        "label": "NetWorker System",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(nsr_up, system)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Data Domain Capacity",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "title": "Data Domain Used %",
+      "type": "gauge",
+      "description": "Physical used / total capacity per Data Domain target.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red",    "value": 85 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "100 * nsr_datadomain_capacity_used_bytes{system=~\"$system\"} / clamp_min(nsr_datadomain_capacity_total_bytes{system=~\"$system\"}, 1)",
+          "legendFormat": "{{dd_name}} ({{system}})"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Data Domain — Total Size",
+      "type": "stat",
+      "description": "nsr_datadomain_capacity_total_bytes per Data Domain.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": { "mode": "fixed", "fixedColor": "blue" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_datadomain_capacity_total_bytes{system=~\"$system\"}",
+          "legendFormat": "{{dd_name}} ({{system}})"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Data Domain — Free Space",
+      "type": "stat",
+      "description": "nsr_datadomain_capacity_available_bytes per Data Domain.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 5 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",    "value": null },
+              { "color": "yellow", "value": 1073741824 },
+              { "color": "green",  "value": 10737418240 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_datadomain_capacity_available_bytes{system=~\"$system\"}",
+          "legendFormat": "{{dd_name}} ({{system}})"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Data Domain — Logical vs Physical Used",
+      "type": "bargauge",
+      "description": "Pre-dedup logical used vs physical used — shows deduplication effectiveness.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 1 },
+      "options": { "orientation": "horizontal", "displayMode": "gradient" },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_datadomain_logical_capacity_used_bytes{system=~\"$system\"}",
+          "legendFormat": "{{dd_name}} logical",
+          "instant": true
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_datadomain_capacity_used_bytes{system=~\"$system\"}",
+          "legendFormat": "{{dd_name}} physical",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Data Domain Capacity Over Time",
+      "type": "timeseries",
+      "description": "Physical used and total capacity trend per Data Domain.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 9 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_datadomain_capacity_used_bytes{system=~\"$system\"}",
+          "legendFormat": "{{dd_name}} used ({{system}})"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_datadomain_capacity_total_bytes{system=~\"$system\"}",
+          "legendFormat": "{{dd_name}} total ({{system}})"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "row",
+      "title": "Volume Capacity",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 }
+    },
+    {
+      "id": 8,
+      "title": "Volume Capacity by Pool",
+      "type": "bargauge",
+      "description": "Formatted volume capacity per volume, coloured by pool.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
+      "options": { "orientation": "horizontal", "displayMode": "gradient" },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_volume_capacity_bytes{system=~\"$system\"}",
+          "legendFormat": "{{volume_name}} / {{pool}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Volume Written Bytes by Pool",
+      "type": "bargauge",
+      "description": "Bytes already written to each volume.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
+      "options": { "orientation": "horizontal", "displayMode": "basic" },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_volume_written_bytes{system=~\"$system\"}",
+          "legendFormat": "{{volume_name}} / {{pool}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Volume Detail Table",
+      "type": "table",
+      "description": "Snapshot of capacity, written bytes, and recycles per volume.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 26 },
+      "fieldConfig": {
+        "defaults": { "unit": "bytes" },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Recycled" },
+            "properties": [ { "id": "unit", "value": "none" } ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Time" },
+            "properties": [ { "id": "custom.hidden", "value": true } ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "Capacity",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_volume_capacity_bytes{system=~\"$system\"}",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "Written",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_volume_written_bytes{system=~\"$system\"}",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "Recycled",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_volume_recycled_total{system=~\"$system\"}",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        { "id": "merge", "options": {} },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "__name__": true, "job": true, "instance": true },
+            "renameByName": {
+              "volume_name": "Volume",
+              "pool": "Pool",
+              "type": "Type",
+              "system": "System",
+              "Value #Capacity": "Capacity",
+              "Value #Written": "Written",
+              "Value #Recycled": "Recycled"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

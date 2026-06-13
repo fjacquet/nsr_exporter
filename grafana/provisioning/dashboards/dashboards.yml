@@ -1,0 +1,14 @@
+# Grafana dashboard provisioning for the docker-compose demo stack.
+# Loads the bundled NetWorker dashboards from disk; subdirectories in
+# /var/lib/grafana/dashboards become Grafana folders (foldersFromFilesStructure).
+apiVersion: 1
+
+providers:
+  - name: NetWorker
+    type: file
+    disableDeletion: false
+    allowUiUpdates: true
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true

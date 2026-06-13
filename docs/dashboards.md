@@ -1,0 +1,106 @@
+# Grafana Dashboards
+
+`nsr_exporter` ships four domain-split Grafana dashboards. They are auto-provisioned
+by the compose demo stack and can be imported manually into any Grafana instance that
+has a Prometheus datasource pointed at the exporter.
+
+## Dashboard overview
+
+| Dashboard | UID | Focus |
+|---|---|---|
+| NetWorker — Overview | `nsr-overview` | System health, job status summary, server statistics |
+| NetWorker — Capacity | `nsr-capacity` | Data Domain capacity/dedup, volume capacity and writes |
+| NetWorker — Backups & Sizing | `nsr-backups` | FETB sizing, ingest throughput, retention, duration |
+| NetWorker — Live Activity | `nsr-activity` | In-flight sessions, client inventory, alert detail |
+
+Each dashboard has a `system` template variable populated from
+`label_values(nsr_up, system)` so you can filter to a single NetWorker system or view
+all systems at once.
+
+## nsr-overview — System Health
+
+**Panels:**
+
+- Systems Up — `nsr_up` per system (background color: green=UP, red=DOWN)
+- Critical Alerts — `nsr_alerts_total{severity="Critical"}` per system
+- Warning Alerts — `nsr_alerts_total{severity="Warning"}` per system
+- Active Sessions — `sum(nsr_sessions_total)` per system
+- Jobs by Completion Status — `nsr_job_status` grouped by `completion_status` (bargauge)
+- Jobs by Type — `nsr_job_status` grouped by `job_type` (bargauge)
+- Server statistics — `nsr_server_saves_total`, `nsr_server_bad_saves_total`, `nsr_server_save_size_bytes`, `nsr_server_recovers_total`
+
+## nsr-capacity — Storage Capacity
+
+**Panels:**
+
+- Data Domain Used % — gauge with 70%/85% thresholds per DD
+- Data Domain Total Size — `nsr_datadomain_capacity_total_bytes`
+- Data Domain Free Space — `nsr_datadomain_capacity_available_bytes` (red when near zero)
+- Logical vs Physical Used — deduplication ratio visualisation (`nsr_datadomain_logical_capacity_used_bytes` vs `nsr_datadomain_capacity_used_bytes`)
+- Data Domain Capacity Over Time — trend timeseries
+- Volume Capacity by Pool — `nsr_volume_capacity_bytes` (bargauge)
+- Volume Written Bytes — `nsr_volume_written_bytes` (bargauge)
+- Volume Detail Table — capacity, written, recycles per volume with column overrides
+
+## nsr-backups — Backups & Sizing
+
+**Panels:**
+
+- Largest Full Backup per Client/Saveset (FETB) — `nsr_backup_source_size_bytes` (bargauge, bytes)
+- Largest Incremental Change — `nsr_backup_change_size_bytes` (bargauge, bytes)
+- FETB Trend Over Time — full vs incremental size trend timeseries
+- Ingest Throughput by Client — `avg(nsr_job_bytes_per_second)` in Bps (bargauge)
+- Backup Duration by Client — `avg(nsr_job_duration_seconds)` in seconds with 1h/4h thresholds
+- Retention Period by Pool — `avg(nsr_backup_retention_seconds)` in seconds
+- Throughput Trend Over Time — timeseries in Bps
+
+!!! note "Do not use `rate()` on per-second gauges"
+    `nsr_job_bytes_per_second` is already an instantaneous per-second gauge — it is
+    not a counter. Use `sum()` or `avg()` in PromQL, never `rate()`.
+
+## nsr-activity — Live Activity
+
+**Panels:**
+
+- Total Active Sessions — `sum(nsr_sessions_total)` per system
+- Sessions by Type — `nsr_sessions_total` by `session_type` (bargauge)
+- Total Bytes In-Flight — `sum(nsr_session_bytes)` across active sessions
+- Active Session Count Over Time — timeseries by session_type and system
+- Bytes In-Flight Over Time — timeseries by session_type and system
+- Client Parallelism — `nsr_client_parallelism` per client (bargauge)
+- Client Inventory Table — `nsr_client_info` with NDMP, scheduled, backup-command columns
+- Alerts by Severity — `nsr_alerts_total` bargauge with colour thresholds
+- Alert Trend Over Time — timeseries by severity and system
+
+## Dashboard files
+
+Dashboards live under `grafana/dashboards/`:
+
+```
+grafana/dashboards/
+  nsr-overview.json
+  nsr-capacity.json
+  nsr-backups.json
+  nsr-activity.json
+```
+
+The provisioning provider (`grafana/provisioning/dashboards/dashboards.yml`) loads
+`/var/lib/grafana/dashboards` with `foldersFromFilesStructure: true` — subdirectories
+become Grafana folders automatically.
+
+## Manual import
+
+To import into an existing Grafana instance:
+
+1. Open Grafana → **Dashboards → Import**.
+2. Upload the JSON file from `grafana/dashboards/`.
+3. Select the Prometheus datasource that scrapes `nsr_exporter`.
+4. Click **Import**.
+
+Alternatively load all four dashboards with `grafana-cli`:
+
+```bash
+for f in grafana/dashboards/*.json; do
+  grafana-cli dashboards import "$f"
+done
+```

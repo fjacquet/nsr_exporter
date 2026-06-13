@@ -1,0 +1,84 @@
+# Alert rules for nsr_exporter. Expressions use metrics emitted by the exporter.
+# NOTE: nsr_job_bytes_per_second and nsr_session_bytes are already per-second gauges
+# or instantaneous gauges — aggregate with sum()/avg(), NEVER rate().
+groups:
+  - name: nsr-health
+    rules:
+      - alert: NsrTargetDown
+        expr: nsr_up == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "NetWorker system unreachable ({{ $labels.system }})"
+          description: "nsr_up is 0 for system {{ $labels.system }} for over 5 minutes — scrape or API connection failed."
+
+      - alert: NsrActiveAlertsCritical
+        expr: nsr_alerts_total{severity="Critical"} > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "NetWorker has Critical alerts ({{ $labels.system }})"
+          description: "{{ $value }} Critical alert(s) active on NetWorker system {{ $labels.system }}. Check the Alerts dashboard."
+
+      - alert: NsrActiveAlertsWarning
+        expr: nsr_alerts_total{severity="Warning"} > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "NetWorker has Warning alerts ({{ $labels.system }})"
+          description: "{{ $value }} Warning alert(s) active on NetWorker system {{ $labels.system }} for over 5 minutes."
+
+  - name: nsr-capacity
+    rules:
+      - alert: NsrDataDomainCapacityHigh
+        expr: >
+          nsr_datadomain_capacity_used_bytes
+          / clamp_min(nsr_datadomain_capacity_total_bytes, 1) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Data Domain capacity above 85% ({{ $labels.system }}/{{ $labels.dd_name }})"
+          description: >
+            Data Domain {{ $labels.dd_name }} on system {{ $labels.system }} is
+            {{ $value | humanizePercentage }} physically used.
+
+      - alert: NsrDataDomainCapacityCritical
+        expr: >
+          nsr_datadomain_capacity_used_bytes
+          / clamp_min(nsr_datadomain_capacity_total_bytes, 1) > 0.95
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Data Domain capacity above 95% ({{ $labels.system }}/{{ $labels.dd_name }})"
+          description: >
+            Data Domain {{ $labels.dd_name }} on system {{ $labels.system }} is
+            {{ $value | humanizePercentage }} physically used — immediate action required.
+
+  - name: nsr-jobs
+    rules:
+      - alert: NsrJobFailed
+        expr: nsr_job_status{completion_status="Failed"} == 1
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "NetWorker backup job failed ({{ $labels.system }})"
+          description: >
+            Job {{ $labels.job_name }} (id={{ $labels.job_id }}) on client {{ $labels.client }}
+            of system {{ $labels.system }} has completion_status=Failed.
+
+      - alert: NsrNoActiveSessions
+        expr: sum by (system) (nsr_sessions_total) == 0
+        for: 30m
+        labels:
+          severity: info
+        annotations:
+          summary: "No active backup sessions ({{ $labels.system }})"
+          description: >
+            No active sessions on NetWorker system {{ $labels.system }} for over 30 minutes.
+            Expected during maintenance windows; investigate otherwise.

@@ -1,0 +1,209 @@
+{
+  "title": "NetWorker — Backups & Sizing",
+  "uid": "nsr-backups",
+  "tags": ["networker", "nsr_exporter", "dell", "backup", "sizing", "fetb"],
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-24h", "to": "now" },
+  "refresh": "5m",
+  "timezone": "browser",
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 0,
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0
+      },
+      {
+        "name": "system",
+        "label": "NetWorker System",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(nsr_up, system)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "FETB — Full Effective Tape Backup",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "title": "Largest Full Backup per Client/Saveset (FETB)",
+      "type": "bargauge",
+      "description": "nsr_backup_source_size_bytes — largest Full backup per client and saveset name. Aggregate with sum/avg, NOT rate().",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 1 },
+      "options": { "orientation": "horizontal", "displayMode": "gradient" },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (client, saveset_name) (nsr_backup_source_size_bytes{system=~\"$system\"})",
+          "legendFormat": "{{client}} / {{saveset_name}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Largest Incremental Change per Client/Saveset",
+      "type": "bargauge",
+      "description": "nsr_backup_change_size_bytes — largest incremental change per client and saveset.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 1 },
+      "options": { "orientation": "horizontal", "displayMode": "basic" },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (client, saveset_name) (nsr_backup_change_size_bytes{system=~\"$system\"})",
+          "legendFormat": "{{client}} / {{saveset_name}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "FETB Trend Over Time",
+      "type": "timeseries",
+      "description": "Trend of Full backup sizes by client — useful for capacity forecasting.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 11 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 5 }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (client) (nsr_backup_source_size_bytes{system=~\"$system\"})",
+          "legendFormat": "{{client}} full"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (client) (nsr_backup_change_size_bytes{system=~\"$system\"})",
+          "legendFormat": "{{client}} incr"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "row",
+      "title": "Performance & Retention",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 }
+    },
+    {
+      "id": 6,
+      "title": "Ingest Throughput by Client",
+      "type": "bargauge",
+      "description": "nsr_job_bytes_per_second — ingest throughput per client/job. Aggregate with sum/avg, NEVER rate().",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "options": { "orientation": "horizontal", "displayMode": "gradient" },
+      "fieldConfig": { "defaults": { "unit": "Bps" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "avg by (client) (nsr_job_bytes_per_second{system=~\"$system\"})",
+          "legendFormat": "{{client}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Backup Duration by Client",
+      "type": "bargauge",
+      "description": "nsr_job_duration_seconds — elapsed backup time per client/job.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "options": { "orientation": "horizontal", "displayMode": "basic" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 3600 },
+              { "color": "red",    "value": 14400 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "avg by (client) (nsr_job_duration_seconds{system=~\"$system\"})",
+          "legendFormat": "{{client}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Retention Period by Pool",
+      "type": "bargauge",
+      "description": "nsr_backup_retention_seconds — retention period (retentionTime-saveTime) per client/saveset/pool.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 28 },
+      "options": { "orientation": "horizontal", "displayMode": "gradient" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "avg by (client, saveset_name, pool) (nsr_backup_retention_seconds{system=~\"$system\"})",
+          "legendFormat": "{{client}} / {{saveset_name}} [{{pool}}]",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Throughput Trend Over Time",
+      "type": "timeseries",
+      "description": "Ingest throughput per client over time — aggregate gauge, do NOT apply rate().",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 36 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "avg by (client) (nsr_job_bytes_per_second{system=~\"$system\"})",
+          "legendFormat": "{{client}}"
+        }
+      ]
+    }
+  ]
+}

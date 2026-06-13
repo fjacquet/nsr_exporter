@@ -1,0 +1,20 @@
+---
+# Demo config for the docker-compose stack: the exporter scrapes the bundled `mocknw`
+# fake-NetWorker service (plain HTTP on :9090, accepts any non-empty Basic creds) so the
+# Grafana dashboards populate out of the box without real hardware. NOT for production —
+# see config.yaml for the real shape and the env-expansion / passwordFile options.
+server:
+  host: "0.0.0.0"
+  port: "9097"
+  uri: "/metrics"
+  logName: ""
+collection:
+  interval: "30s"     # snappy refresh for the demo
+  timeout: "10s"
+  backupWindow: "24h"
+systems:
+  - name: nsr-demo
+    host: "http://mocknw:9090"   # bundled mock; client appends the /nwrestapi/v3/global base path
+    username: "${NSR1_USERNAME}"
+    password: "${NSR1_PASSWORD}"
+    insecureSkipVerify: true

@@ -4,8 +4,8 @@
 coverage.out
 coverage.html
 sbom.json
-nsr_exporter
-mocknw
+/nsr_exporter
+/mocknw
 
 # Logs
 *.log
