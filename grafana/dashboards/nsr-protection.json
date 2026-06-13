@@ -1,0 +1,529 @@
+{
+  "title": "NetWorker — Protection & Compliance",
+  "uid": "nsr-protection",
+  "tags": ["networker", "nsr_exporter", "dell", "backup", "protection", "compliance"],
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-24h", "to": "now" },
+  "refresh": "5m",
+  "timezone": "browser",
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 0,
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0
+      },
+      {
+        "name": "system",
+        "label": "NetWorker System",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(nsr_up, system)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Policy Overview",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "title": "Enabled Policies",
+      "type": "stat",
+      "description": "Count of protection policies with nsr_policy_enabled == 1.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": { "mode": "fixed", "fixedColor": "green" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "count(nsr_policy_enabled{system=~\"$system\"} == 1)",
+          "legendFormat": "Enabled"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Disabled Policies",
+      "type": "stat",
+      "description": "Count of protection policies with nsr_policy_enabled == 0.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "count(nsr_policy_enabled{system=~\"$system\"} == 0)",
+          "legendFormat": "Disabled"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Total Clients Covered",
+      "type": "stat",
+      "description": "Sum of nsr_policy_client_count across all policies (clients may appear in multiple policies).",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": { "mode": "fixed", "fixedColor": "blue" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (system) (nsr_policy_client_count{system=~\"$system\"})",
+          "legendFormat": "{{system}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Stale Clients (>48h)",
+      "type": "stat",
+      "description": "Count of clients whose last backup is older than 48 hours. time() - nsr_client_last_backup_timestamp_seconds > 172800.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red",    "value": 5 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "count(time() - nsr_client_last_backup_timestamp_seconds{system=~\"$system\"} > 172800)",
+          "legendFormat": "Stale clients"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Policy Enabled/Disabled Status",
+      "type": "table",
+      "description": "All protection policies with enabled status (1=enabled, 0=disabled) and client count.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 5 },
+      "fieldConfig": {
+        "defaults": { "unit": "none" },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Value #Enabled" },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  { "type": "value", "options": { "0": { "text": "DISABLED", "color": "yellow" } } },
+                  { "type": "value", "options": { "1": { "text": "ENABLED",  "color": "green"  } } }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Time" },
+            "properties": [ { "id": "custom.hidden", "value": true } ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "Enabled",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_policy_enabled{system=~\"$system\"}",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "Clients",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_policy_client_count{system=~\"$system\"}",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        { "id": "merge", "options": {} },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "__name__": true, "job": true, "instance": true },
+            "renameByName": {
+              "policy": "Policy",
+              "system": "System",
+              "Value #Enabled": "Enabled",
+              "Value #Clients": "Clients"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "row",
+      "title": "Protection Groups",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 }
+    },
+    {
+      "id": 8,
+      "title": "Clients per Protection Group",
+      "type": "bargauge",
+      "description": "nsr_group_client_count per group — shows which groups have the most clients.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "options": { "orientation": "horizontal", "displayMode": "gradient" },
+      "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_group_client_count{system=~\"$system\"}",
+          "legendFormat": "{{group}} ({{policy}})",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Clients per Policy (sum of groups)",
+      "type": "bargauge",
+      "description": "nsr_policy_client_count per policy — total clients covered by each policy.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "options": { "orientation": "horizontal", "displayMode": "basic" },
+      "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_policy_client_count{system=~\"$system\"}",
+          "legendFormat": "{{policy}} ({{system}})",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Client Backup Staleness",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 }
+    },
+    {
+      "id": 11,
+      "title": "Hours Since Last Backup (Top 20 most stale)",
+      "type": "bargauge",
+      "description": "time() - nsr_client_last_backup_timestamp_seconds converted to hours. Clients most overdue shown first. Thresholds: 24h yellow, 48h red.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 25 },
+      "options": { "orientation": "horizontal", "displayMode": "gradient" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "h",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 24 },
+              { "color": "red",    "value": 48 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "topk(20, (time() - nsr_client_last_backup_timestamp_seconds{system=~\"$system\"}) / 3600)",
+          "legendFormat": "{{client_name}} ({{system}})",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Client Last Backup Staleness Over Time",
+      "type": "timeseries",
+      "description": "Average hours since last backup across all clients — rising trend signals backups falling behind.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 35 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "h",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 24 },
+              { "color": "red",    "value": 48 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "avg by (system) ((time() - nsr_client_last_backup_timestamp_seconds{system=~\"$system\"}) / 3600)",
+          "legendFormat": "avg staleness {{system}}"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "row",
+      "title": "VMware Integration",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 43 }
+    },
+    {
+      "id": 14,
+      "title": "VMware vCenter Status",
+      "type": "table",
+      "description": "All registered vCenter instances with connection status. Uses nsr_vmware_info labels: vcenter, version, status.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 44 },
+      "fieldConfig": {
+        "defaults": { "unit": "none" },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [ { "id": "custom.hidden", "value": true } ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Time" },
+            "properties": [ { "id": "custom.hidden", "value": true } ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_vmware_info{system=~\"$system\"}",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "__name__": true, "job": true, "instance": true },
+            "renameByName": {
+              "vcenter": "vCenter",
+              "version": "Version",
+              "status": "Connection Status",
+              "system": "System"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "title": "VMware vCenters by Connection Status",
+      "type": "bargauge",
+      "description": "Count of vCenters grouped by connection status (connected/disconnected). Uses nsr_vmware_info label status.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 44 },
+      "options": { "orientation": "horizontal", "displayMode": "gradient" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red",   "value": 1 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (status) (nsr_vmware_info{system=~\"$system\"})",
+          "legendFormat": "{{status}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "row",
+      "title": "Queue Depth & Wait",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 52 }
+    },
+    {
+      "id": 17,
+      "title": "Queue Depth by Queue",
+      "type": "bargauge",
+      "description": "nsr_queue_depth per queue name — pending items waiting to be processed.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 53 },
+      "options": { "orientation": "horizontal", "displayMode": "gradient" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red",    "value": 50 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_queue_depth{system=~\"$system\"}",
+          "legendFormat": "{{queue}} ({{system}})",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "title": "Queue Wait Time by Queue",
+      "type": "bargauge",
+      "description": "nsr_queue_wait_seconds per queue — current wait time in seconds. Use sum/avg, never rate (gauge).",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 53 },
+      "options": { "orientation": "horizontal", "displayMode": "basic" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 300 },
+              { "color": "red",    "value": 900 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_queue_wait_seconds{system=~\"$system\"}",
+          "legendFormat": "{{queue}} ({{system}})",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "title": "Queue Depth Over Time",
+      "type": "timeseries",
+      "description": "nsr_queue_depth trend — rising depth may indicate a bottleneck.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 61 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_queue_depth{system=~\"$system\"}",
+          "legendFormat": "{{queue}} ({{system}})"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "title": "Queue Wait Time Over Time",
+      "type": "timeseries",
+      "description": "nsr_queue_wait_seconds trend per queue.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 61 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_queue_wait_seconds{system=~\"$system\"}",
+          "legendFormat": "{{queue}} ({{system}})"
+        }
+      ]
+    }
+  ]
+}

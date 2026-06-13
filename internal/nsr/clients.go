@@ -19,7 +19,9 @@ type nwClient struct {
 	NDMP            bool   `json:"ndmp"`
 	ScheduledBackup bool   `json:"scheduledBackup"`
 	BackupCommand   string `json:"backupCommand"`
-	Parallelism     *int   `json:"parallelism"` // pointer: absent → no sample, never 0
+	Parallelism     *int   `json:"parallelism"`     // pointer: absent → no sample, never 0
+	LastBackupTime  string `json:"lastBackupTime"`  // INFERRED — validate live; RFC3339
+	OperatingSystem string `json:"operatingSystem"` // INFERRED — validate live
 }
 
 // ClientsCollector maps GET /clients to client inventory metrics.
@@ -32,7 +34,7 @@ func (ClientsCollector) Name() string { return "clients" }
 func (ClientsCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]models.Sample, error) {
 	var resp clientsResponse
 	err := c.Get(ctx, "/clients", nsrclient.QueryOpts{
-		Fields: []string{"hostname", "ndmp", "scheduledBackup", "backupCommand", "parallelism"},
+		Fields: []string{"hostname", "ndmp", "scheduledBackup", "backupCommand", "parallelism", "lastBackupTime", "operatingSystem"},
 	}, &resp)
 	if err != nil {
 		return nil, err
@@ -48,11 +50,18 @@ func (ClientsCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]mod
 			lbl("ndmp", strconv.FormatBool(cl.NDMP)),
 			lbl("scheduled_backup", strconv.FormatBool(cl.ScheduledBackup)),
 			lbl("backup_command", cl.BackupCommand),
+			lbl("operating_system", cl.OperatingSystem),
 		)
 		// Absent parallelism yields no sample rather than a misleading 0 (ADR-0008).
 		if cl.Parallelism != nil {
 			b.gauge("nsr_client_parallelism", "Configured backup stream limit per client.",
 				float64(*cl.Parallelism), lbl("client_name", cl.Hostname))
+		}
+		// Absent or unparseable lastBackupTime yields no sample (ADR-0008).
+		if ts, ok := parseTime(cl.LastBackupTime); ok {
+			b.gauge("nsr_client_last_backup_timestamp_seconds",
+				"Unix timestamp of the most recent completed backup for this client.", ts,
+				lbl("client_name", cl.Hostname))
 		}
 	}
 	return b.out, nil

@@ -82,3 +82,87 @@ groups:
           description: >
             No active sessions on NetWorker system {{ $labels.system }} for over 30 minutes.
             Expected during maintenance windows; investigate otherwise.
+
+  - name: nsr-devices
+    rules:
+      - alert: NsrDeviceOffline
+        expr: nsr_device_info{status="offline"} == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "NetWorker backup device offline ({{ $labels.system }}/{{ $labels.device_name }})"
+          description: >
+            Device {{ $labels.device_name }} (type={{ $labels.type }}) on system
+            {{ $labels.system }} has status=offline for over 5 minutes.
+
+      - alert: NsrStorageNodeDown
+        expr: nsr_storagenode_info{status!="enabled"} == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "NetWorker storage node not enabled ({{ $labels.system }}/{{ $labels.node }})"
+          description: >
+            Storage node {{ $labels.node }} on system {{ $labels.system }} has
+            status={{ $labels.status }} — expected enabled.
+
+      - alert: NsrPoolCapacityHigh
+        expr: >
+          nsr_pool_used_bytes
+          / clamp_min(nsr_pool_capacity_bytes, 1) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "NetWorker pool capacity above 85% ({{ $labels.system }}/{{ $labels.pool }})"
+          description: >
+            Pool {{ $labels.pool }} on system {{ $labels.system }} is
+            {{ $value | humanizePercentage }} used.
+
+  - name: nsr-protection
+    rules:
+      - alert: NsrClientBackupStale
+        expr: time() - nsr_client_last_backup_timestamp_seconds > 172800
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Client backup stale >48h ({{ $labels.system }}/{{ $labels.client_name }})"
+          description: >
+            Client {{ $labels.client_name }} on system {{ $labels.system }} has not
+            completed a backup in over 48 hours ({{ $value | humanizeDuration }} ago).
+
+      - alert: NsrPolicyDisabled
+        expr: nsr_policy_enabled == 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "NetWorker protection policy disabled ({{ $labels.system }}/{{ $labels.policy }})"
+          description: >
+            Protection policy {{ $labels.policy }} on system {{ $labels.system }} is
+            disabled (nsr_policy_enabled=0). Clients covered by this policy are not protected.
+
+      - alert: NsrQueueDepthHigh
+        expr: nsr_queue_depth > 50
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "NetWorker queue depth high ({{ $labels.system }}/{{ $labels.queue }})"
+          description: >
+            Queue {{ $labels.queue }} on system {{ $labels.system }} has
+            {{ $value }} pending items for over 10 minutes — possible bottleneck.
+
+      - alert: NsrVCenterUnreachable
+        expr: nsr_vmware_info{status!="connected"} == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "VMware vCenter unreachable ({{ $labels.system }}/{{ $labels.vcenter }})"
+          description: >
+            vCenter {{ $labels.vcenter }} (version={{ $labels.version }}) registered
+            on NetWorker system {{ $labels.system }} has connection status
+            {{ $labels.status }} — VMware backup jobs may fail.

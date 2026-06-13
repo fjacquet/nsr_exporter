@@ -15,9 +15,25 @@ import (
 
 // Config is the top-level exporter configuration.
 type Config struct {
-	Server     ServerConfig     `yaml:"server"`
-	Collection CollectionConfig `yaml:"collection"`
-	Systems    []SystemConfig   `yaml:"systems"`
+	Server        ServerConfig        `yaml:"server"`
+	Collection    CollectionConfig    `yaml:"collection"`
+	Systems       []SystemConfig      `yaml:"systems"`
+	OpenTelemetry OpenTelemetryConfig `yaml:"opentelemetry"`
+}
+
+// OpenTelemetryConfig controls the optional OTLP push export path.
+// OTEL_EXPORTER_OTLP_ENDPOINT env var takes precedence over Endpoint when set
+// (standard OTEL SDK convention).
+type OpenTelemetryConfig struct {
+	// Endpoint is the OTLP/gRPC collector address (e.g. "otel-collector:4317").
+	// An empty string disables OTLP push.
+	Endpoint string `yaml:"endpoint"`
+	// PushInterval is how often metrics are pushed to the collector. Default: 30s.
+	PushInterval time.Duration `yaml:"pushInterval"`
+	// Insecure allows plaintext gRPC (no TLS) for in-cluster collectors.
+	Insecure bool `yaml:"insecure"`
+	// Headers are optional gRPC metadata headers sent with every push.
+	Headers map[string]string `yaml:"headers"`
 }
 
 // ServerConfig controls the exporter's own HTTP listener (not the NetWorker port).
@@ -110,6 +126,9 @@ func (c *Config) applyDefaults() error {
 	}
 	if c.Collection.BackupWindow == 0 {
 		c.Collection.BackupWindow = 24 * time.Hour
+	}
+	if c.OpenTelemetry.PushInterval == 0 {
+		c.OpenTelemetry.PushInterval = 30 * time.Second
 	}
 	// Resolve passwordFile into Password where set.
 	for i := range c.Systems {

@@ -62,18 +62,42 @@ secrets out-of-band without embedding them in the compose environment.
 
 ## OTLP push export (optional)
 
-The compose stacks include an `otel-collector` service on ports `4317` (gRPC) and
-`8889` (Prometheus scrape endpoint). Enable the OTLP push in `config.yaml`:
+The compose stacks include an `otel-collector` service. The collector exposes two ports:
+
+| Port | Protocol | Purpose |
+|---|---|---|
+| `4317` | gRPC | Receives OTLP metrics pushed by the exporter |
+| `8889` | HTTP | Prometheus scrape endpoint — the collector re-exposes pushed metrics here |
+
+`config.demo.yaml` ships with the OTLP endpoint pre-configured so the bundled
+`docker compose up` stack automatically pushes metrics to the collector.
+
+To enable OTLP in your own `config.yaml`:
 
 ```yaml
 opentelemetry:
-  endpoint: http://otel-collector:4317
+  endpoint: "otel-collector:4317"
+  insecure: true       # use false and configure TLS for production collectors
+  pushInterval: "30s"  # how often to push; default is 30s
 ```
 
-Or set the standard env var:
+Or set the standard OTEL env var (takes precedence over the config file):
 
 ```bash
 OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+```
+
+Once running, verify the collector is receiving metrics:
+
+```bash
+curl -s http://localhost:8889/metrics | grep '^nsr_'
+```
+
+The `nsr_otlp_export_errors_total` counter on the exporter's own `/metrics` increments
+whenever a push fails — use it to alert on OTLP outages:
+
+```promql
+increase(nsr_otlp_export_errors_total[5m]) > 0
 ```
 
 ## Health check

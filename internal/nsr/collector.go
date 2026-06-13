@@ -76,6 +76,12 @@ func DefaultCollectors() []ResourceCollector {
 		JobsCollector{},
 		SessionsCollector{},
 		StorageCollector{},
+		DevicesCollector{},
+		StorageNodesCollector{},
+		PoolsCollector{},
+		VMwareCollector{},
+		QueuesCollector{},
+		PoliciesCollector{},
 	}
 }
 

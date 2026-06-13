@@ -21,26 +21,51 @@ const basePath = "/nwrestapi/v3/global"
 // shapes the exporter's collectors decode.
 var fixtures = map[string]string{
 	"/clients": `{"count":2,"clients":[
-		{"hostname":"app01.local","ndmp":false,"scheduledBackup":true,"backupCommand":"save","parallelism":4},
-		{"hostname":"db01.local","ndmp":true,"scheduledBackup":true,"backupCommand":"nsrndmp_save","parallelism":12}
+		{"hostname":"app01.local","ndmp":false,"scheduledBackup":true,"backupCommand":"save","parallelism":4,"lastBackupTime":"2026-06-13T01:00:00Z","operatingSystem":"Linux"},
+		{"hostname":"db01.local","ndmp":true,"scheduledBackup":true,"backupCommand":"nsrndmp_save","parallelism":12,"lastBackupTime":"2026-06-13T02:00:00Z","operatingSystem":"Windows"}
 	]}`,
 	"/alerts": `{"count":1,"alerts":[
-		{"severity":"WARNING","category":"Server","message":"Index size threshold exceeded","time":"2026-06-13T08:00:00Z"}
+		{"severity":"WARNING","category":"Server","message":"Index size threshold exceeded","time":"2026-06-13T08:00:00Z","acknowledged":false}
 	]}`,
 	"/serverstatistics": `{"upSince":"2026-06-13T00:00:00Z","saves":12000,"saveSize":987654321,"recovers":42,"recoverSize":1234567,"badSaves":7,"badRecovers":1}`,
 	"/jobs": `{"count":2,"jobs":[
-		{"id":1001,"name":"daily-app01","type":"save","state":"Completed","completionStatus":"Succeeded","client":"app01.local"},
-		{"id":1002,"name":"daily-db01","type":"save","state":"Completed","completionStatus":"Failed","client":"db01.local"}
+		{"id":1001,"name":"daily-app01","type":"save","state":"Completed","completionStatus":"Succeeded","client":"app01.local","startTime":"2026-06-13T01:00:00Z","endTime":"2026-06-13T01:30:00Z","group":"DefaultGroup","level":"Full"},
+		{"id":1002,"name":"daily-db01","type":"save","state":"Completed","completionStatus":"Failed","client":"db01.local","startTime":"2026-06-13T02:00:00Z","endTime":"2026-06-13T02:15:00Z","group":"DBGroup","level":"Incr"}
 	]}`,
 	"/sessions": `{"count":1,"sessions":[
 		{"type":"backup","client":"app01.local","state":"running","size":104857600}
 	]}`,
 	"/volumes": `{"count":2,"volumes":[
-		{"name":"vol01","pool":"Default","mediaType":"adv_file","capacity":1099511627776,"written":659706976665,"recycledCount":3},
-		{"name":"vol02","pool":"DataDomain","mediaType":"Data Domain","capacity":5497558138880,"written":1099511627776,"recycledCount":0}
+		{"name":"vol01","pool":"Default","mediaType":"adv_file","status":"appendable","capacity":1099511627776,"written":659706976665,"recycledCount":3},
+		{"name":"vol02","pool":"DataDomain","mediaType":"Data Domain","status":"full","capacity":5497558138880,"written":1099511627776,"recycledCount":0}
 	]}`,
 	"/datadomainsystems": `{"count":1,"datadomainsystems":[
 		{"name":"dd01.local","model":"DD9400","osVersion":"7.10.1.0","capacityTotal":98956046499840,"capacityUsed":32985348833280,"capacityAvailable":65970697666560,"logicalCapacityUsed":296868139499520}
+	]}`,
+	"/devices": `{"count":2,"devices":[
+		{"name":"tape01","type":"tape","status":"enabled","serialNumber":"SN001","capacity":1099511627776},
+		{"name":"adv01","type":"adv_file","status":"enabled","serialNumber":"SN002","capacity":10995116277760}
+	]}`,
+	"/storagenodes": `{"count":1,"storagenodes":[
+		{"name":"sn01.local","status":"enabled","deviceCount":4}
+	]}`,
+	"/pools": `{"count":2,"pools":[
+		{"name":"Default","type":"Backup","capacityTotal":5497558138880,"capacityUsed":2748779069440,"volumeCount":10},
+		{"name":"DataDomain","type":"Backup","capacityTotal":98956046499840,"capacityUsed":32985348833280,"volumeCount":50}
+	]}`,
+	"/vmwares": `{"count":1,"vmwares":[
+		{"name":"vcenter.local","version":"7.0.3","connectionStatus":"connected"}
+	]}`,
+	"/queues": `{"count":1,"queues":[
+		{"name":"DefaultQueue","depth":5,"waitTime":30}
+	]}`,
+	"/protectionpolicies": `{"count":2,"protectionpolicies":[
+		{"name":"GoldPolicy","enabled":true,"clientCount":10},
+		{"name":"SilverPolicy","enabled":false,"clientCount":5}
+	]}`,
+	"/protectiongroups": `{"count":2,"protectiongroups":[
+		{"name":"DBGroup","policy":"GoldPolicy","clientCount":5},
+		{"name":"AppGroup","policy":"GoldPolicy","clientCount":5}
 	]}`,
 	"/backups": `{"count":2,"backups":[
 		{"client":"app01.local","name":"/data","level":"full","size":536870912000,"saveTime":"2026-06-13T01:00:00Z","retentionTime":"2026-07-13T01:00:00Z","pool":"DataDomain","duration":1800},
