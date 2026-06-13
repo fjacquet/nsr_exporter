@@ -1,0 +1,28 @@
+# Build artifacts
+/bin/
+/dist/
+coverage.out
+coverage.html
+sbom.json
+nsr_exporter
+mocknw
+
+# Logs
+*.log
+
+# Generated docs site
+/site/
+
+# Local secrets / overrides
+.env
+*.local.yaml
+.claude.local.md
+.claude/settings.local.json
+
+# Editor / OS noise
+.DS_Store
+.idea/
+*.swp
+
+# rtk
+.rtk/

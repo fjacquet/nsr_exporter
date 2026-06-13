@@ -1,0 +1,24 @@
+---
+# nsr_exporter configuration. config.yaml is the source of truth; ${ENV_VAR}
+# references in host/username/password expand at load (fail-fast on unset), and a
+# passwordFile may supply a secret out-of-band. A .env beside this file is loaded
+# at startup as a quickstart convenience but never overrides real environment vars.
+server:
+  host: "0.0.0.0"
+  port: "9097"        # exporter's own /metrics port (NOT the NetWorker REST port)
+  uri: "/metrics"
+  logName: ""         # "" → stdout
+collection:
+  interval: "5m"      # background poll frequency
+  timeout: "60s"      # per-system API deadline
+systems:
+  - name: nsr-prod-01
+    host: "https://networker-prod-01.local:9090"   # 9090 = NetWorker REST API port
+    username: "${NSR1_USERNAME}"
+    password: "${NSR1_PASSWORD}"
+    insecureSkipVerify: true
+  # Multi-target = one entry per NetWorker system; every metric is labelled system="<name>".
+  # - name: nsr-prod-02
+  #   host: "https://networker-prod-02.local:9090"
+  #   username: "${NSR2_USERNAME}"
+  #   password: "${NSR2_PASSWORD}"

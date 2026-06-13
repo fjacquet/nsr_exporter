@@ -1,0 +1,25 @@
+version: "2"
+
+linters:
+  enable:
+    - gosec
+    - revive
+    - misspell
+    - unconvert
+  exclusions:
+    rules:
+      # Reading operator-supplied paths is intended behavior: the --config file and
+      # passwordFile funnel through the single audited choke point
+      # internal/config/fileio.go, and the log file path comes from operator config
+      # in internal/logging. The family standard forbids inline //nolint, so the
+      # G304 exclusion is path-scoped here instead.
+      - path: internal/config/fileio.go
+        linters: [gosec]
+        text: "G304"
+      - path: internal/logging/logging.go
+        linters: [gosec]
+        text: "G304"
+      # Test mocks intentionally write static fixtures to ResponseWriter; test
+      # signatures keep the standard (t *testing.T) param even when unused.
+      - path: _test\.go
+        linters: [gosec, revive]
