@@ -32,6 +32,13 @@ func Catalog() []MetricMeta {
 		{"nsr_session_active", "An active NetWorker session (always 1).", models.Gauge},
 		{"nsr_session_bytes", "Bytes moved so far by an active session.", models.Gauge},
 		{"nsr_sessions_total", "Count of active sessions by type.", models.Gauge},
+		{"nsr_volume_capacity_bytes", "Formatted volume capacity.", models.Gauge},
+		{"nsr_volume_written_bytes", "Bytes written to the volume.", models.Gauge},
+		{"nsr_volume_recycled_total", "Times the volume has been recycled.", models.Counter},
+		{"nsr_datadomain_capacity_total_bytes", "Target Data Domain total size.", models.Gauge},
+		{"nsr_datadomain_capacity_used_bytes", "Data Domain physical capacity used.", models.Gauge},
+		{"nsr_datadomain_capacity_available_bytes", "Data Domain free space.", models.Gauge},
+		{"nsr_datadomain_logical_capacity_used_bytes", "Pre-deduplication size stored on target.", models.Gauge},
 	}
 }
 

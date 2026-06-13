@@ -57,6 +57,12 @@ func mockNetWorker(t *testing.T) *httptest.Server {
 	mux.HandleFunc("/nwrestapi/v3/global/sessions", func(w http.ResponseWriter, _ *http.Request) {
 		json(w, `{"count":2,"sessions":[{"type":"backup","client":"app01","state":"running","size":2048},{"type":"backup","client":"db01","state":"running","size":4096}]}`)
 	})
+	mux.HandleFunc("/nwrestapi/v3/global/volumes", func(w http.ResponseWriter, _ *http.Request) {
+		json(w, `{"count":1,"volumes":[{"name":"vol01","pool":"Default","mediaType":"adv_file","capacity":1000,"written":600,"recycledCount":2}]}`)
+	})
+	mux.HandleFunc("/nwrestapi/v3/global/datadomainsystems", func(w http.ResponseWriter, _ *http.Request) {
+		json(w, `{"count":1,"datadomainsystems":[{"name":"dd01","model":"DD9400","osVersion":"7.10","capacityTotal":9000,"capacityUsed":3000,"capacityAvailable":6000,"logicalCapacityUsed":27000}]}`)
+	})
 	return httptest.NewServer(mux)
 }
 
@@ -160,6 +166,34 @@ func TestSessionsCollector(t *testing.T) {
 	}
 	if !familyHasLabel(fams, "nsr_session_bytes", "client", "app01") {
 		t.Fatal("nsr_session_bytes missing client=app01")
+	}
+}
+
+// TestStorageCollector covers two endpoints in one collector, the volume counter
+// with its own label set, and the Data Domain capacity gauges.
+func TestStorageCollector(t *testing.T) {
+	srv := mockNetWorker(t)
+	defer srv.Close()
+	c, store := testCollector(srv)
+	c.CollectOnce(context.Background())
+
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(NewPromCollector(store))
+	fams, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather: %v", err)
+	}
+	if got := familyValue(fams, "nsr_volume_capacity_bytes"); got != 1000 {
+		t.Fatalf("nsr_volume_capacity_bytes = %v, want 1000", got)
+	}
+	if got := familyValue(fams, "nsr_volume_recycled_total"); got != 2 {
+		t.Fatalf("nsr_volume_recycled_total = %v, want 2", got)
+	}
+	if got := familyValue(fams, "nsr_datadomain_logical_capacity_used_bytes"); got != 27000 {
+		t.Fatalf("nsr_datadomain_logical_capacity_used_bytes = %v, want 27000", got)
+	}
+	if !familyHasLabel(fams, "nsr_datadomain_capacity_used_bytes", "model", "DD9400") {
+		t.Fatal("nsr_datadomain_capacity_used_bytes missing model=DD9400")
 	}
 }
 
