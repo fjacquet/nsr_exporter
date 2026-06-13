@@ -21,6 +21,7 @@ func Catalog() []MetricMeta {
 		{"nsr_alerts_total", "Count of active alerts by severity.", models.Gauge},
 		{"nsr_client_info", "Metadata about a configured backup client (always 1).", models.Gauge},
 		{"nsr_client_parallelism", "Configured backup stream limit per client.", models.Gauge},
+		{"nsr_client_last_backup_timestamp_seconds", "Unix timestamp of the most recent completed backup for this client.", models.Gauge},
 		{"nsr_server_up_since_timestamp_seconds", "NetWorker server start time (Unix seconds).", models.Gauge},
 		{"nsr_server_saves_total", "Cumulative backup attempts.", models.Counter},
 		{"nsr_server_save_size_bytes", "Cumulative bytes written by backups.", models.Counter},

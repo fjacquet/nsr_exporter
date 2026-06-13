@@ -43,7 +43,7 @@ func mockNetWorker(t *testing.T) *httptest.Server {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		json(w, `{"count":1,"clients":[{"hostname":"app01","ndmp":false,"scheduledBackup":true,"backupCommand":"save","parallelism":4}]}`)
+		json(w, `{"count":1,"clients":[{"hostname":"app01","ndmp":false,"scheduledBackup":true,"backupCommand":"save","parallelism":4,"lastBackupTime":"2026-06-13T01:00:00Z","operatingSystem":"Linux"}]}`)
 	})
 	mux.HandleFunc("/nwrestapi/v3/global/alerts", func(w http.ResponseWriter, _ *http.Request) {
 		json(w, `{"count":1,"alerts":[{"severity":"WARNING","category":"Server","message":"m","time":"t"}]}`)
@@ -229,6 +229,44 @@ func TestSizingCollector(t *testing.T) {
 	// Only the first Full carries duration=100 → throughput 1000/100 = 10.
 	if got := familyValue(fams, "nsr_job_bytes_per_second"); got != 10 {
 		t.Fatalf("nsr_job_bytes_per_second = %v, want 10", got)
+	}
+}
+
+// TestClientsCollector_C1 asserts the C1 additions: nsr_client_last_backup_timestamp_seconds
+// and operating_system label on nsr_client_info, via both Prometheus and OTLP paths.
+func TestClientsCollector_C1(t *testing.T) {
+	srv := mockNetWorker(t)
+	defer srv.Close()
+	c, store := testCollector(srv)
+	c.CollectOnce(context.Background())
+
+	// Prometheus path
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(NewPromCollector(store))
+	fams, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather: %v", err)
+	}
+	// Verify operating_system label on nsr_client_info
+	if !familyHasLabel(fams, "nsr_client_info", "operating_system", "Linux") {
+		t.Fatal("prometheus nsr_client_info missing operating_system=Linux label")
+	}
+	// Verify nsr_client_last_backup_timestamp_seconds (2026-06-13T01:00:00Z = 1749776400)
+	if got := familyValue(fams, "nsr_client_last_backup_timestamp_seconds"); got <= 0 {
+		t.Fatalf("prometheus nsr_client_last_backup_timestamp_seconds = %v, want > 0", got)
+	}
+
+	// OTLP path
+	reader := sdkmetric.NewManualReader()
+	if _, err := NewOTLPExporter(store, reader); err != nil {
+		t.Fatalf("otlp: %v", err)
+	}
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(context.Background(), &rm); err != nil {
+		t.Fatalf("otlp collect: %v", err)
+	}
+	if got := otlpValue(&rm, "nsr_client_last_backup_timestamp_seconds"); got <= 0 {
+		t.Fatalf("otlp nsr_client_last_backup_timestamp_seconds = %v, want > 0", got)
 	}
 }
 

@@ -21,8 +21,8 @@ const basePath = "/nwrestapi/v3/global"
 // shapes the exporter's collectors decode.
 var fixtures = map[string]string{
 	"/clients": `{"count":2,"clients":[
-		{"hostname":"app01.local","ndmp":false,"scheduledBackup":true,"backupCommand":"save","parallelism":4},
-		{"hostname":"db01.local","ndmp":true,"scheduledBackup":true,"backupCommand":"nsrndmp_save","parallelism":12}
+		{"hostname":"app01.local","ndmp":false,"scheduledBackup":true,"backupCommand":"save","parallelism":4,"lastBackupTime":"2026-06-13T01:00:00Z","operatingSystem":"Linux"},
+		{"hostname":"db01.local","ndmp":true,"scheduledBackup":true,"backupCommand":"nsrndmp_save","parallelism":12,"lastBackupTime":"2026-06-13T02:00:00Z","operatingSystem":"Windows"}
 	]}`,
 	"/alerts": `{"count":1,"alerts":[
 		{"severity":"WARNING","category":"Server","message":"Index size threshold exceeded","time":"2026-06-13T08:00:00Z"}
