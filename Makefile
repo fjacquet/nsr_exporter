@@ -9,7 +9,7 @@ GO          ?= go
 
 .DEFAULT_GOAL := sure
 
-.PHONY: tools fmt fmt-check vet lint test test-race test-coverage vuln ci sure \
+.PHONY: all tools fmt fmt-check vet lint test test-race test-coverage vuln ci sure \
         cli sbom release release-snapshot docker run-cli clean
 
 tools: ## install pinned dev tools
@@ -46,6 +46,9 @@ ci: fmt-check vet lint test-race vuln
 
 # Local convenience.
 sure: fmt vet test cli lint
+
+# Full local pipeline: CI gate + every build artifact (binary, SBOM, image).
+all: ci cli sbom docker
 
 cli: ## build bin/nsr_exporter
 	CGO_ENABLED=0 $(GO) build -ldflags "$(LDFLAGS)" -o bin/$(BINARY) .
