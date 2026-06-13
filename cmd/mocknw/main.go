@@ -29,8 +29,8 @@ var fixtures = map[string]string{
 	]}`,
 	"/serverstatistics": `{"upSince":"2026-06-13T00:00:00Z","saves":12000,"saveSize":987654321,"recovers":42,"recoverSize":1234567,"badSaves":7,"badRecovers":1}`,
 	"/jobs": `{"count":2,"jobs":[
-		{"id":1001,"name":"daily-app01","type":"save","state":"Completed","completionStatus":"Succeeded","client":"app01.local"},
-		{"id":1002,"name":"daily-db01","type":"save","state":"Completed","completionStatus":"Failed","client":"db01.local"}
+		{"id":1001,"name":"daily-app01","type":"save","state":"Completed","completionStatus":"Succeeded","client":"app01.local","startTime":"2026-06-13T01:00:00Z","endTime":"2026-06-13T01:30:00Z","group":"DefaultGroup","level":"Full"},
+		{"id":1002,"name":"daily-db01","type":"save","state":"Completed","completionStatus":"Failed","client":"db01.local","startTime":"2026-06-13T02:00:00Z","endTime":"2026-06-13T02:15:00Z","group":"DBGroup","level":"Incr"}
 	]}`,
 	"/sessions": `{"count":1,"sessions":[
 		{"type":"backup","client":"app01.local","state":"running","size":104857600}

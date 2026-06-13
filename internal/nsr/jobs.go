@@ -36,6 +36,10 @@ type nwJob struct {
 	State            string      `json:"state"`            // INFERRED — validate live
 	CompletionStatus string      `json:"completionStatus"` // INFERRED — validate live
 	Client           string      `json:"client"`           // INFERRED — validate live
+	StartTime        string      `json:"startTime"`        // INFERRED — validate live; RFC3339
+	EndTime          string      `json:"endTime"`          // INFERRED — validate live; RFC3339
+	Group            string      `json:"group"`            // INFERRED — validate live
+	Level            string      `json:"level"`            // INFERRED — validate live
 }
 
 // JobsCollector maps GET /serverstatistics and GET /jobs.
@@ -64,7 +68,7 @@ func (JobsCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]models
 
 	var jobs jobsResponse
 	if err := c.Get(ctx, "/jobs", nsrclient.QueryOpts{
-		Fields: []string{"id", "name", "type", "state", "completionStatus", "client"},
+		Fields: []string{"id", "name", "type", "state", "completionStatus", "client", "startTime", "endTime", "group", "level"},
 	}, &jobs); err != nil {
 		return nil, err
 	}
@@ -76,7 +80,24 @@ func (JobsCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]models
 			lbl("state", j.State),
 			lbl("completion_status", j.CompletionStatus),
 			lbl("client", j.Client),
+			lbl("group", j.Group),
+			lbl("level", j.Level),
 		)
+		// Absent or unparseable timestamps yield no sample (ADR-0008).
+		if ts, ok := parseTime(j.StartTime); ok {
+			b.gauge("nsr_job_start_timestamp_seconds",
+				"Unix timestamp when the job started.", ts,
+				lbl("job_id", j.ID.String()),
+				lbl("job_name", j.Name),
+			)
+		}
+		if ts, ok := parseTime(j.EndTime); ok {
+			b.gauge("nsr_job_end_timestamp_seconds",
+				"Unix timestamp when the job ended.", ts,
+				lbl("job_id", j.ID.String()),
+				lbl("job_name", j.Name),
+			)
+		}
 	}
 	return b.out, nil
 }

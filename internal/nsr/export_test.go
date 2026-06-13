@@ -52,7 +52,7 @@ func mockNetWorker(t *testing.T) *httptest.Server {
 		json(w, `{"upSince":"2026-06-13T00:00:00Z","saves":1000,"saveSize":5000000,"recovers":10,"recoverSize":2000,"badSaves":3,"badRecovers":1}`)
 	})
 	mux.HandleFunc("/nwrestapi/v3/global/jobs", func(w http.ResponseWriter, _ *http.Request) {
-		json(w, `{"count":1,"jobs":[{"id":42,"name":"daily","type":"save","state":"Completed","completionStatus":"Succeeded","client":"app01"}]}`)
+		json(w, `{"count":1,"jobs":[{"id":42,"name":"daily","type":"save","state":"Completed","completionStatus":"Succeeded","client":"app01","startTime":"2026-06-13T01:00:00Z","endTime":"2026-06-13T01:30:00Z","group":"DefaultGroup","level":"Full"}]}`)
 	})
 	mux.HandleFunc("/nwrestapi/v3/global/sessions", func(w http.ResponseWriter, _ *http.Request) {
 		json(w, `{"count":2,"sessions":[{"type":"backup","client":"app01","state":"running","size":2048},{"type":"backup","client":"db01","state":"running","size":4096}]}`)
@@ -303,6 +303,52 @@ func TestClientsCollector_C1(t *testing.T) {
 	}
 	if got := otlpValue(&rm, "nsr_client_last_backup_timestamp_seconds"); got <= 0 {
 		t.Fatalf("otlp nsr_client_last_backup_timestamp_seconds = %v, want > 0", got)
+	}
+}
+
+// TestJobsCollector_C3 asserts the C3 additions: nsr_job_start_timestamp_seconds,
+// nsr_job_end_timestamp_seconds, and group/level labels on nsr_job_status, via both
+// Prometheus and OTLP paths.
+func TestJobsCollector_C3(t *testing.T) {
+	srv := mockNetWorker(t)
+	defer srv.Close()
+	c, store := testCollector(srv)
+	c.CollectOnce(context.Background())
+
+	// Prometheus path
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(NewPromCollector(store))
+	fams, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather: %v", err)
+	}
+	if got := familyValue(fams, "nsr_job_start_timestamp_seconds"); got <= 0 {
+		t.Fatalf("prometheus nsr_job_start_timestamp_seconds = %v, want > 0", got)
+	}
+	if got := familyValue(fams, "nsr_job_end_timestamp_seconds"); got <= 0 {
+		t.Fatalf("prometheus nsr_job_end_timestamp_seconds = %v, want > 0", got)
+	}
+	if !familyHasLabel(fams, "nsr_job_status", "group", "DefaultGroup") {
+		t.Fatal("prometheus nsr_job_status missing group=DefaultGroup label")
+	}
+	if !familyHasLabel(fams, "nsr_job_status", "level", "Full") {
+		t.Fatal("prometheus nsr_job_status missing level=Full label")
+	}
+
+	// OTLP path
+	reader := sdkmetric.NewManualReader()
+	if _, err := NewOTLPExporter(store, reader); err != nil {
+		t.Fatalf("otlp: %v", err)
+	}
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(context.Background(), &rm); err != nil {
+		t.Fatalf("otlp collect: %v", err)
+	}
+	if got := otlpValue(&rm, "nsr_job_start_timestamp_seconds"); got <= 0 {
+		t.Fatalf("otlp nsr_job_start_timestamp_seconds = %v, want > 0", got)
+	}
+	if got := otlpValue(&rm, "nsr_job_end_timestamp_seconds"); got <= 0 {
+		t.Fatalf("otlp nsr_job_end_timestamp_seconds = %v, want > 0", got)
 	}
 }
 

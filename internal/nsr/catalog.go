@@ -30,6 +30,8 @@ func Catalog() []MetricMeta {
 		{"nsr_server_bad_saves_total", "Cumulative failed backup attempts.", models.Counter},
 		{"nsr_server_bad_recovers_total", "Cumulative failed recovery attempts.", models.Counter},
 		{"nsr_job_status", "An individual NetWorker job (always 1).", models.Gauge},
+		{"nsr_job_start_timestamp_seconds", "Unix timestamp when the job started.", models.Gauge},
+		{"nsr_job_end_timestamp_seconds", "Unix timestamp when the job ended.", models.Gauge},
 		{"nsr_session_active", "An active NetWorker session (always 1).", models.Gauge},
 		{"nsr_session_bytes", "Bytes moved so far by an active session.", models.Gauge},
 		{"nsr_sessions_total", "Count of active sessions by type.", models.Gauge},
