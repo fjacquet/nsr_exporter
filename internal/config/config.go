@@ -15,9 +15,9 @@ import (
 
 // Config is the top-level exporter configuration.
 type Config struct {
-	Server        ServerConfig       `yaml:"server"`
-	Collection    CollectionConfig   `yaml:"collection"`
-	Systems       []SystemConfig     `yaml:"systems"`
+	Server        ServerConfig        `yaml:"server"`
+	Collection    CollectionConfig    `yaml:"collection"`
+	Systems       []SystemConfig      `yaml:"systems"`
 	OpenTelemetry OpenTelemetryConfig `yaml:"opentelemetry"`
 }
 
