@@ -2,6 +2,7 @@ package nsr
 
 import (
 	"context"
+	"time"
 
 	"github.com/fjacquet/nsr_exporter/internal/models"
 	"github.com/fjacquet/nsr_exporter/internal/nsrclient"
@@ -33,8 +34,28 @@ func (b *builder) gauge(name, help string, value float64, labels ...models.Label
 	b.out = append(b.out, models.Sample{Name: name, Help: help, Type: models.Gauge, Value: value, Labels: labels})
 }
 
+func (b *builder) counter(name, help string, value float64, labels ...models.Label) {
+	b.out = append(b.out, models.Sample{Name: name, Help: help, Type: models.Counter, Value: value, Labels: labels})
+}
+
 // lbl is a terse label constructor.
 func lbl(key, value string) models.Label { return models.Label{Key: key, Value: value} }
+
+// parseTime parses a NetWorker timestamp into Unix seconds. NetWorker emits
+// RFC3339 strings (e.g. "2026-06-13T08:00:00Z"); some fields may already be epoch
+// numbers handled at the field level. An unparseable value returns ok=false so the
+// caller emits no sample rather than a misleading zero (ADR-0008).
+func parseTime(s string) (seconds float64, ok bool) {
+	if s == "" {
+		return 0, false
+	}
+	for _, layout := range []string{time.RFC3339, time.RFC3339Nano, "2006-01-02T15:04:05"} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return float64(t.Unix()), true
+		}
+	}
+	return 0, false
+}
 
 // withSystem returns a copy of s with the system identity label appended. Append
 // (not prepend) keeps a stable canonical order; the system key is uniform across

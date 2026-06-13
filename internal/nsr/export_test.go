@@ -48,6 +48,12 @@ func mockNetWorker(t *testing.T) *httptest.Server {
 	mux.HandleFunc("/nwrestapi/v3/global/alerts", func(w http.ResponseWriter, _ *http.Request) {
 		json(w, `{"count":1,"alerts":[{"severity":"WARNING","category":"Server","message":"m","time":"t"}]}`)
 	})
+	mux.HandleFunc("/nwrestapi/v3/global/serverstatistics", func(w http.ResponseWriter, _ *http.Request) {
+		json(w, `{"upSince":"2026-06-13T00:00:00Z","saves":1000,"saveSize":5000000,"recovers":10,"recoverSize":2000,"badSaves":3,"badRecovers":1}`)
+	})
+	mux.HandleFunc("/nwrestapi/v3/global/jobs", func(w http.ResponseWriter, _ *http.Request) {
+		json(w, `{"count":1,"jobs":[{"id":42,"name":"daily","type":"save","state":"Completed","completionStatus":"Succeeded","client":"app01"}]}`)
+	})
 	return httptest.NewServer(mux)
 }
 
@@ -107,6 +113,31 @@ func TestDualExport_PrometheusAndOTLP(t *testing.T) {
 	}
 }
 
+// TestJobsCollector covers the counter path (serverstatistics) and label rendering
+// of a numeric job id, through the Prometheus export path.
+func TestJobsCollector(t *testing.T) {
+	srv := mockNetWorker(t)
+	defer srv.Close()
+	c, store := testCollector(srv)
+	c.CollectOnce(context.Background())
+
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(NewPromCollector(store))
+	fams, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather: %v", err)
+	}
+	if got := familyValue(fams, "nsr_server_saves_total"); got != 1000 {
+		t.Fatalf("nsr_server_saves_total = %v, want 1000", got)
+	}
+	if !familyHasLabel(fams, "nsr_job_status", "job_id", "42") {
+		t.Fatal("nsr_job_status missing job_id=42 (numeric id should render as string label)")
+	}
+	if !familyHasLabel(fams, "nsr_job_status", "completion_status", "Succeeded") {
+		t.Fatal("nsr_job_status missing completion_status=Succeeded")
+	}
+}
+
 // TestCatalogCoversAllEmittedMetrics guards against export drift: every metric a
 // collector emits must have a catalog entry, else the OTLP path silently drops it.
 func TestCatalogCoversAllEmittedMetrics(t *testing.T) {
@@ -127,9 +158,14 @@ func TestCatalogCoversAllEmittedMetrics(t *testing.T) {
 
 func familyValue(fams []*dto.MetricFamily, name string) float64 {
 	for _, f := range fams {
-		if f.GetName() == name {
-			return f.Metric[0].GetGauge().GetValue()
+		if f.GetName() != name {
+			continue
 		}
+		m := f.Metric[0]
+		if m.Counter != nil {
+			return m.GetCounter().GetValue()
+		}
+		return m.GetGauge().GetValue()
 	}
 	return -1
 }

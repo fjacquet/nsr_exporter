@@ -28,8 +28,23 @@ nsr_exporter --config real.yaml --once --debug --trace 2>trace.log | sort > samp
 | `nsr_client_info` | Gauge (1) | `client_name`, `ndmp`, `scheduled_backup`, `backup_command` | Configured client metadata |
 | `nsr_client_parallelism` | Gauge | `client_name` | Configured backup stream limit (absent if unset — never 0) |
 
+## Server & jobs (`/serverstatistics`, `/jobs`)
+
+Field names are INFERRED (see `jobs.go`) pending live validation.
+
+| Metric | Type | Labels | Meaning |
+|---|---|---|---|
+| `nsr_server_up_since_timestamp_seconds` | Gauge | — | Server start time (Unix seconds) |
+| `nsr_server_saves_total` | Counter | — | Cumulative backup attempts |
+| `nsr_server_save_size_bytes` | Counter | — | Cumulative bytes written by backups |
+| `nsr_server_recovers_total` | Counter | — | Cumulative recovery attempts |
+| `nsr_server_recover_size_bytes` | Counter | — | Cumulative bytes restored |
+| `nsr_server_bad_saves_total` | Counter | — | Cumulative failed backups |
+| `nsr_server_bad_recovers_total` | Counter | — | Cumulative failed recoveries |
+| `nsr_job_status` | Gauge (1) | `job_id`, `job_name`, `job_type`, `state`, `completion_status`, `client` | An individual job |
+
 ## Planned (design spec §5, not yet implemented)
 
-`nsr_server_*` + `nsr_job_status` (jobs.go) · `nsr_session_*` (sessions.go) ·
-`nsr_volume_*` + `nsr_datadomain_*` (storage.go) · `nsr_backup_*` +
-`nsr_job_bytes_per_second` + `nsr_job_duration_seconds` (sizing.go, bounded `/backups`).
+`nsr_session_*` (sessions.go) · `nsr_volume_*` + `nsr_datadomain_*` (storage.go) ·
+`nsr_backup_*` + `nsr_job_bytes_per_second` + `nsr_job_duration_seconds`
+(sizing.go, bounded `/backups`).
