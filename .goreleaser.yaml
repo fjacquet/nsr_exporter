@@ -1,0 +1,66 @@
+version: 2
+
+project_name: nsr_exporter
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: nsr_exporter
+    main: .
+    binary: nsr_exporter
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - LICENSE
+      - README.md
+      - config.yaml
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+sboms:
+  - id: module
+    artifacts: archive
+    cmd: cyclonedx-gomod
+    # GoReleaser runs the hook in ./dist, so the module path is one level up.
+    args: ["mod", "-licenses", "-json", "-output", "$document", "../"]
+
+homebrew_casks:
+  - name: nsr_exporter
+    repository:
+      owner: fjacquet
+      name: homebrew-tap
+      token: '{{ index .Env "HOMEBREW_TAP_GITHUB_TOKEN" }}'
+    # Self-skip when the cross-repo token is absent so releases don't break before
+    # the tap exists (the default GITHUB_TOKEN cannot push to another repo). Use
+    # index, not .Env.KEY field access, so a missing key yields "" instead of an error.
+    skip_upload: '{{ if index .Env "HOMEBREW_TAP_GITHUB_TOKEN" }}false{{ else }}true{{ end }}'
+    homepage: https://github.com/fjacquet/nsr_exporter
+    description: Prometheus + OTLP exporter for Dell EMC NetWorker
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system "xattr", "-d", "com.apple.quarantine", "#{staged_path}/nsr_exporter" rescue nil
+          end
+
+changelog:
+  use: github-native
+
+release:
+  prerelease: auto
