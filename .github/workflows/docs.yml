@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: "3.x"
       - name: Install MkDocs Material
-        run: pip install mkdocs-material
+        run: pip install mkdocs-material mkdocs-awesome-pages-plugin
       - name: Build
         run: mkdocs build --strict
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0

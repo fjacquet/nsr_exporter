@@ -1,0 +1,8 @@
+# Architecture Decisions section (awesome-pages plugin). The directory is pulled
+# into the top-level nav by the `...` rest token in mkdocs.yml. Titles come from
+# each file's H1; `...` below expands to every remaining ADR sorted by filename
+# (0001…), so a new ADR appears automatically — no mkdocs.yml edit required.
+title: Architecture Decisions
+nav:
+  - index.md
+  - ...
