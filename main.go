@@ -85,9 +85,10 @@ func run(cfgPath string, debug, once, trace bool) error {
 	// Register the Prometheus export path.
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(nsr.NewPromCollector(store))
+	otlpErrCounter := nsr.NewOTLPErrorCounter(reg)
 
 	// OTLP export path (push) only when an endpoint is configured.
-	otlpShutdown := setupOTLP(cfg, store, log)
+	otlpShutdown := setupOTLP(cfg, store, log, otlpErrCounter)
 	defer otlpShutdown()
 
 	// Serve HTTP BEFORE the first collection cycle: the first poll can exceed the
@@ -135,7 +136,8 @@ func newServer(cfg *config.Config, store *nsr.SnapshotStore, reg *prometheus.Reg
 // is resolved from cfg.OpenTelemetry.Endpoint first; OTEL_EXPORTER_OTLP_ENDPOINT
 // env var takes precedence (standard OTEL SDK convention) when set.
 // If neither is set, OTLP is disabled and the exporter runs Prometheus-only.
-func setupOTLP(cfg *config.Config, store *nsr.SnapshotStore, log *logrus.Logger) func() {
+// errCounter is incremented on every failed push so OTLP outages are alertable.
+func setupOTLP(cfg *config.Config, store *nsr.SnapshotStore, log *logrus.Logger, errCounter prometheus.Counter) func() {
 	endpoint := cfg.OpenTelemetry.Endpoint
 	if env := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); env != "" {
 		endpoint = env // env var overrides config (OTEL SDK convention)
@@ -149,7 +151,8 @@ func setupOTLP(cfg *config.Config, store *nsr.SnapshotStore, log *logrus.Logger)
 		log.WithError(err).Warn("OTLP endpoint set but exporter init failed; continuing Prometheus-only")
 		return func() {}
 	}
-	reader := sdkmetric.NewPeriodicReader(exp, sdkmetric.WithInterval(cfg.OpenTelemetry.PushInterval))
+	counted := nsr.NewCountingExporter(exp, errCounter)
+	reader := sdkmetric.NewPeriodicReader(counted, sdkmetric.WithInterval(cfg.OpenTelemetry.PushInterval))
 	otlp, err := nsr.NewOTLPExporter(store, reader)
 	if err != nil {
 		log.WithError(err).Warn("OTLP exporter wiring failed; continuing Prometheus-only")
