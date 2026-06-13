@@ -29,9 +29,15 @@ nav:
   - Architecture Decisions:
       - Overview: adr/index.md
       - 0001 Snapshot model: adr/0001-snapshot-collection-model.md
+      - 0002 Modular resource collectors: adr/0002-modular-resource-collectors.md
       - 0003 Hand-rolled client: adr/0003-hand-rolled-rest-client.md
+      - 0005 Config hot reload: adr/0005-config-hot-reload.md
+      - 0006 Label-key consistency invariant: adr/0006-label-key-consistency-invariant.md
       - 0007 HTTP Basic auth: adr/0007-http-basic-auth.md
+      - 0008 Absent-never-zero parsing: adr/0008-absent-never-zero-parsing.md
+      - 0009 Metric naming & units: adr/0009-metric-naming-and-units.md
       - 0010 /backups bounding: adr/0010-backups-bounding.md
+      - 0011 Supply-chain / release hardening: adr/0011-supply-chain-release-hardening.md
 
 # Keep working notes and the reference PDFs out of the published site so
 # `mkdocs build --strict` doesn't fail on pages that aren't part of the nav.
