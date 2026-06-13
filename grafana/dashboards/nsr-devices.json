@@ -43,7 +43,7 @@
       "id": 2,
       "title": "Devices by Status",
       "type": "bargauge",
-      "description": "Count of backup devices grouped by status (enabled/disabled/offline). Uses nsr_device_info label status.",
+      "description": "Count of backup devices grouped by status. Uses nsr_device_info label status.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 1 },
       "options": { "orientation": "horizontal", "displayMode": "gradient" },
@@ -73,9 +73,9 @@
     },
     {
       "id": 3,
-      "title": "Devices by Type",
+      "title": "Devices by Media Type",
       "type": "bargauge",
-      "description": "Count of backup devices grouped by type (tape/disk/adv_file). Uses nsr_device_info label type.",
+      "description": "Count of backup devices grouped by media_type. Uses nsr_device_info label media_type.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 1 },
       "options": { "orientation": "horizontal", "displayMode": "basic" },
@@ -90,33 +90,9 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by (type) (nsr_device_info{system=~\"$system\"})",
-          "legendFormat": "{{type}}",
+          "expr": "sum by (media_type) (nsr_device_info{system=~\"$system\"})",
+          "legendFormat": "{{media_type}}",
           "instant": true
-        }
-      ]
-    },
-    {
-      "id": 4,
-      "title": "Total Device Capacity",
-      "type": "stat",
-      "description": "Sum of nsr_device_capacity_bytes across all devices. Use sum — this is a gauge, not a counter.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 1 },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "color": { "mode": "fixed", "fixedColor": "blue" }
-        },
-        "overrides": []
-      },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value" },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by (system) (nsr_device_capacity_bytes{system=~\"$system\"})",
-          "legendFormat": "{{system}}"
         }
       ]
     },
@@ -126,7 +102,7 @@
       "type": "stat",
       "description": "Number of devices with status=offline. Alert threshold: any offline device is red.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 5 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 1 },
       "fieldConfig": {
         "defaults": {
           "unit": "none",
@@ -155,7 +131,7 @@
       "id": 6,
       "title": "Device Inventory Table",
       "type": "table",
-      "description": "All devices with name, type, status, and capacity.",
+      "description": "All devices with name, media_type, media_family, status, and serial.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 9 },
       "fieldConfig": {
@@ -164,10 +140,6 @@
           {
             "matcher": { "id": "byName", "options": "Value #Info" },
             "properties": [ { "id": "custom.hidden", "value": true } ]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Value #Capacity" },
-            "properties": [ { "id": "unit", "value": "bytes" } ]
           },
           {
             "matcher": { "id": "byName", "options": "Time" },
@@ -182,13 +154,6 @@
           "expr": "nsr_device_info{system=~\"$system\"}",
           "format": "table",
           "instant": true
-        },
-        {
-          "refId": "Capacity",
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "nsr_device_capacity_bytes{system=~\"$system\"}",
-          "format": "table",
-          "instant": true
         }
       ],
       "transformations": [
@@ -199,11 +164,11 @@
             "excludeByName": { "__name__": true, "job": true, "instance": true },
             "renameByName": {
               "device_name": "Device",
-              "type": "Type",
+              "media_type": "Media Type",
+              "media_family": "Media Family",
               "status": "Status",
               "serial": "Serial",
-              "system": "System",
-              "Value #Capacity": "Capacity"
+              "system": "System"
             }
           }
         }
@@ -217,9 +182,9 @@
     },
     {
       "id": 8,
-      "title": "Storage Nodes by Status",
+      "title": "Storage Nodes by Enabled State",
       "type": "bargauge",
-      "description": "Count of storage nodes grouped by status. Uses nsr_storagenode_info label status.",
+      "description": "Count of storage nodes grouped by enabled label. Uses nsr_storagenode_info label enabled.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 20 },
       "options": { "orientation": "horizontal", "displayMode": "gradient" },
@@ -241,8 +206,8 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by (status) (nsr_storagenode_info{system=~\"$system\"})",
-          "legendFormat": "{{status}}",
+          "expr": "sum by (enabled) (nsr_storagenode_info{system=~\"$system\"})",
+          "legendFormat": "{{enabled}}",
           "instant": true
         }
       ]
@@ -275,84 +240,70 @@
     {
       "id": 10,
       "type": "row",
-      "title": "Pool Capacity",
+      "title": "Pool Inventory",
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 }
     },
     {
       "id": 11,
-      "title": "Pool Used %",
-      "type": "gauge",
-      "description": "nsr_pool_used_bytes / nsr_pool_capacity_bytes per pool. Thresholds: 70% yellow, 85% red.",
+      "title": "Pools by Type",
+      "type": "bargauge",
+      "description": "nsr_pool_info — count of pools by pool_type (info gauge =1, replaces removed capacity metrics).",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 29 },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green",  "value": null },
-              { "color": "yellow", "value": 70 },
-              { "color": "red",    "value": 85 }
-            ]
-          },
-          "color": { "mode": "thresholds" }
-        },
-        "overrides": []
-      },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 29 },
+      "options": { "orientation": "horizontal", "displayMode": "basic" },
+      "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
       "targets": [
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "100 * nsr_pool_used_bytes{system=~\"$system\"} / clamp_min(nsr_pool_capacity_bytes{system=~\"$system\"}, 1)",
-          "legendFormat": "{{pool}} ({{system}})"
+          "expr": "sum by (pool_type) (nsr_pool_info{system=~\"$system\"})",
+          "legendFormat": "{{pool_type}}",
+          "instant": true
         }
       ]
     },
     {
       "id": 12,
-      "title": "Pool Total Capacity",
-      "type": "bargauge",
-      "description": "nsr_pool_capacity_bytes per pool. Use sum — this is a gauge, not a counter.",
+      "title": "Pool Inventory Table",
+      "type": "table",
+      "description": "nsr_pool_info — all pools with type and enabled state.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 29 },
-      "options": { "orientation": "horizontal", "displayMode": "gradient" },
-      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "nsr_pool_capacity_bytes{system=~\"$system\"}",
-          "legendFormat": "{{pool}} ({{system}})",
-          "instant": true
-        }
-      ]
-    },
-    {
-      "id": 13,
-      "title": "Volumes per Pool",
-      "type": "bargauge",
-      "description": "nsr_pool_volume_count per pool.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 29 },
-      "options": { "orientation": "horizontal", "displayMode": "basic" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 29 },
       "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "color": { "mode": "fixed", "fixedColor": "purple" }
-        },
-        "overrides": []
+        "defaults": { "unit": "none" },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [ { "id": "custom.hidden", "value": true } ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Time" },
+            "properties": [ { "id": "custom.hidden", "value": true } ]
+          }
+        ]
       },
       "targets": [
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "nsr_pool_volume_count{system=~\"$system\"}",
-          "legendFormat": "{{pool}} ({{system}})",
+          "expr": "nsr_pool_info{system=~\"$system\"}",
+          "format": "table",
           "instant": true
+        }
+      ],
+      "transformations": [
+        { "id": "merge", "options": {} },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "__name__": true, "job": true, "instance": true },
+            "renameByName": {
+              "pool": "Pool",
+              "pool_type": "Type",
+              "enabled": "Enabled",
+              "system": "System"
+            }
+          }
         }
       ]
     },
@@ -366,7 +317,7 @@
       "id": 15,
       "title": "Volumes by Status",
       "type": "bargauge",
-      "description": "Count of volumes by status (appendable/full/recyclable). Uses nsr_volume_status label status.",
+      "description": "Count of volumes by status (Recyclable/WORM/etc.). Uses nsr_volume_status label status.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 38 },
       "options": { "orientation": "horizontal", "displayMode": "gradient" },

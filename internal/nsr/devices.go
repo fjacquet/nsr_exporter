@@ -12,12 +12,16 @@ type devicesResponse struct {
 	Devices []nwDevice `json:"devices"`
 }
 
+// nwDevice mirrors the swagger 19.13 Device model: media class is `mediaType` +
+// `mediaFamily` (Tape/Disk/Cloud/Logical), the serial is `deviceSerialNumber`, and
+// `status` is an enum (Enabled/Disabled/Service). There is no device-level capacity
+// field, so this collector emits only an inventory info gauge.
 type nwDevice struct {
-	Name     string   `json:"name"`         // INFERRED — validate live
-	Type     string   `json:"type"`         // INFERRED — validate live (tape/disk/adv_file)
-	Status   string   `json:"status"`       // INFERRED — validate live (enabled/disabled/offline)
-	Serial   string   `json:"serialNumber"` // INFERRED — validate live
-	Capacity *float64 `json:"capacity"`     // INFERRED — validate live; bytes
+	Name        string `json:"name"`
+	MediaType   string `json:"mediaType"`
+	MediaFamily string `json:"mediaFamily"`
+	Status      string `json:"status"`
+	Serial      string `json:"deviceSerialNumber"`
 }
 
 // DevicesCollector maps GET /devices to device inventory metrics.
@@ -30,7 +34,7 @@ func (DevicesCollector) Name() string { return "devices" }
 func (DevicesCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]models.Sample, error) {
 	var resp devicesResponse
 	if err := c.Get(ctx, "/devices", nsrclient.QueryOpts{
-		Fields: []string{"name", "type", "status", "serialNumber", "capacity"},
+		Fields: []string{"name", "mediaType", "mediaFamily", "status", "deviceSerialNumber"},
 	}, &resp); err != nil {
 		return nil, err
 	}
@@ -43,13 +47,11 @@ func (DevicesCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]mod
 		// nsr_device_info is an info gauge (always 1) carrying all label-only attributes.
 		b.gauge("nsr_device_info", "A NetWorker backup device (always 1).", 1,
 			lbl("device_name", d.Name),
-			lbl("type", d.Type),
+			lbl("media_type", d.MediaType),
+			lbl("media_family", d.MediaFamily),
 			lbl("status", d.Status),
 			lbl("serial", d.Serial),
 		)
-		// Absent capacity yields no sample rather than a misleading 0 (ADR-0008).
-		emitGauge(&b, "nsr_device_capacity_bytes", "Device storage capacity in bytes.",
-			d.Capacity, lbl("device_name", d.Name))
 	}
 	return b.out, nil
 }

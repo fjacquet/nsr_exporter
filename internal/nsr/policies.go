@@ -8,27 +8,32 @@ import (
 )
 
 // protectionPoliciesResponse wraps GET /protectionpolicies:
-// {"count":N,"protectionpolicies":[...]}.
+// {"count":N,"protectionPolicies":[...]} (camelCase wrapper, swagger 19.13).
 type protectionPoliciesResponse struct {
-	Policies []nwProtectionPolicy `json:"protectionpolicies"`
+	Policies []nwProtectionPolicy `json:"protectionPolicies"`
 }
 
+// nwProtectionPolicy mirrors the swagger 19.13 Policy model. There is no top-level
+// `enabled` or `clientCount`; enablement lives on each workflow, so policy-enabled
+// is derived as "any workflow enabled".
 type nwProtectionPolicy struct {
-	Name        string   `json:"name"`        // INFERRED — validate live
-	Enabled     bool     `json:"enabled"`     // INFERRED — validate live
-	ClientCount *float64 `json:"clientCount"` // INFERRED — validate live
+	Name      string `json:"name"`
+	Workflows []struct {
+		Enabled bool `json:"enabled"`
+	} `json:"workflows"`
 }
 
 // protectionGroupsResponse wraps GET /protectiongroups:
-// {"count":N,"protectiongroups":[...]}.
+// {"count":N,"protectionGroups":[...]} (camelCase wrapper, swagger 19.13).
 type protectionGroupsResponse struct {
-	Groups []nwProtectionGroup `json:"protectiongroups"`
+	Groups []nwProtectionGroup `json:"protectionGroups"`
 }
 
+// nwProtectionGroup mirrors the swagger 19.13 ProtectionGroup model. There is no
+// `policy` back-reference or `clientCount`; the useful field is `workItemType`.
 type nwProtectionGroup struct {
-	Name        string   `json:"name"`        // INFERRED — validate live
-	Policy      string   `json:"policy"`      // INFERRED — validate live; parent policy name
-	ClientCount *float64 `json:"clientCount"` // INFERRED — validate live
+	Name         string `json:"name"`
+	WorkItemType string `json:"workItemType"`
 }
 
 // PoliciesCollector maps GET /protectionpolicies and GET /protectiongroups.
@@ -37,14 +42,13 @@ type PoliciesCollector struct{}
 // Name identifies the policies collector.
 func (PoliciesCollector) Name() string { return "policies" }
 
-// Collect fetches protection policies and groups, correlating them in-process to
-// avoid N+1 calls per cycle.
+// Collect fetches protection policies and groups.
 func (PoliciesCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]models.Sample, error) {
 	var b builder
 
 	var policies protectionPoliciesResponse
 	if err := c.Get(ctx, "/protectionpolicies", nsrclient.QueryOpts{
-		Fields: []string{"name", "enabled", "clientCount"},
+		Fields: []string{"name", "workflows"},
 	}, &policies); err != nil {
 		return nil, err
 	}
@@ -52,20 +56,22 @@ func (PoliciesCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]mo
 		if p.Name == "" {
 			continue
 		}
+		// A policy has no top-level enabled flag; treat it as enabled when any of its
+		// workflows is enabled.
 		enabled := 0.0
-		if p.Enabled {
-			enabled = 1.0
+		for _, w := range p.Workflows {
+			if w.Enabled {
+				enabled = 1.0
+				break
+			}
 		}
-		b.gauge("nsr_policy_enabled", "1 if the protection policy is enabled, else 0.", enabled,
+		b.gauge("nsr_policy_enabled", "1 if any workflow in the protection policy is enabled, else 0.", enabled,
 			lbl("policy", p.Name))
-		// Absent client count yields no sample (ADR-0008).
-		emitGauge(&b, "nsr_policy_client_count", "Number of clients covered by this policy.",
-			p.ClientCount, lbl("policy", p.Name))
 	}
 
 	var groups protectionGroupsResponse
 	if err := c.Get(ctx, "/protectiongroups", nsrclient.QueryOpts{
-		Fields: []string{"name", "policy", "clientCount"},
+		Fields: []string{"name", "workItemType"},
 	}, &groups); err != nil {
 		return nil, err
 	}
@@ -73,9 +79,10 @@ func (PoliciesCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]mo
 		if g.Name == "" {
 			continue
 		}
-		// nsr_group_client_count correlates group and policy in-process (no extra requests).
-		emitGauge(&b, "nsr_group_client_count", "Number of clients in this protection group.",
-			g.ClientCount, lbl("group", g.Name), lbl("policy", g.Policy))
+		b.gauge("nsr_group_info", "A protection group (always 1).", 1,
+			lbl("group", g.Name),
+			lbl("work_item_type", g.WorkItemType),
+		)
 	}
 	return b.out, nil
 }

@@ -43,7 +43,7 @@
       "id": 2,
       "title": "Total Active Sessions",
       "type": "stat",
-      "description": "Sum of nsr_sessions_total across all session types.",
+      "description": "Sum of nsr_active_sessions across all session types.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
       "fieldConfig": {
@@ -58,7 +58,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by (system) (nsr_sessions_total{system=~\"$system\"})",
+          "expr": "sum by (system) (nsr_active_sessions{system=~\"$system\"})",
           "legendFormat": "{{system}}"
         }
       ]
@@ -67,7 +67,7 @@
       "id": 3,
       "title": "Sessions by Type",
       "type": "bargauge",
-      "description": "nsr_sessions_total broken down by session_type (backup / recover / clone / etc.).",
+      "description": "nsr_active_sessions broken down by session_type (Saving / Recovering / Browsing).",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 9, "x": 6, "y": 1 },
       "options": { "orientation": "horizontal", "displayMode": "basic" },
@@ -76,7 +76,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by (session_type) (nsr_sessions_total{system=~\"$system\"})",
+          "expr": "sum by (session_type) (nsr_active_sessions{system=~\"$system\"})",
           "legendFormat": "{{session_type}}",
           "instant": true
         }
@@ -124,7 +124,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by (session_type, system) (nsr_sessions_total{system=~\"$system\"})",
+          "expr": "sum by (session_type, system) (nsr_active_sessions{system=~\"$system\"})",
           "legendFormat": "{{session_type}} / {{system}}"
         }
       ]
@@ -135,7 +135,7 @@
       "type": "timeseries",
       "description": "Total bytes moved by in-flight sessions — instantaneous gauge, NOT a rate.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 13 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
       "fieldConfig": {
         "defaults": {
           "unit": "bytes",
@@ -148,6 +148,29 @@
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "expr": "sum by (session_type, system) (nsr_session_bytes{system=~\"$system\"})",
+          "legendFormat": "{{session_type}} / {{system}}"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Live Transfer Throughput",
+      "type": "timeseries",
+      "description": "nsr_session_transfer_bytes_per_second — live throughput per session type. Aggregate with sum/avg, NEVER rate().",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (session_type, system) (nsr_session_transfer_bytes_per_second{system=~\"$system\"})",
           "legendFormat": "{{session_type}} / {{system}}"
         }
       ]
@@ -231,9 +254,9 @@
     },
     {
       "id": 11,
-      "title": "Alerts by Severity",
+      "title": "Alerts by Priority",
       "type": "bargauge",
-      "description": "nsr_alerts_total — count of active alerts grouped by severity.",
+      "description": "nsr_alerts_active — count of active alerts grouped by priority.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 6, "w": 8, "x": 0, "y": 31 },
       "options": { "orientation": "horizontal", "displayMode": "basic" },
@@ -255,8 +278,8 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by (severity) (nsr_alerts_total{system=~\"$system\"})",
-          "legendFormat": "{{severity}}",
+          "expr": "sum by (priority) (nsr_alerts_active{system=~\"$system\"})",
+          "legendFormat": "{{priority}}",
           "instant": true
         }
       ]
@@ -265,7 +288,7 @@
       "id": 12,
       "title": "Alert Trend Over Time",
       "type": "timeseries",
-      "description": "Count of active alerts over time, grouped by severity.",
+      "description": "Count of active alerts over time, grouped by priority.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 6, "w": 16, "x": 8, "y": 31 },
       "fieldConfig": {
@@ -279,8 +302,8 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by (severity, system) (nsr_alerts_total{system=~\"$system\"})",
-          "legendFormat": "{{severity}} / {{system}}"
+          "expr": "sum by (priority, system) (nsr_alerts_active{system=~\"$system\"})",
+          "legendFormat": "{{priority}} / {{system}}"
         }
       ]
     }

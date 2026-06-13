@@ -8,20 +8,21 @@ import (
 	"github.com/fjacquet/nsr_exporter/internal/nsrclient"
 )
 
-// serverStatistics decodes GET /serverstatistics. Unlike the list endpoints this is
-// a single object (no count envelope). All numeric fields are pointers so an
-// absent/misnamed field yields no sample rather than a false 0 (ADR-0008).
-//
-// Field names are INFERRED from the metric spec and NetWorker camelCase convention
-// — validate live with --once --debug --trace.
+// serverStatistics decodes GET /serverstatistics — a single object (no count
+// envelope). Counts are int64-valued; saveSize/recoverSize are Size objects
+// ({"unit","value"}), not scalars. Pointers/objects absent → no sample (ADR-0008).
 type serverStatistics struct {
-	UpSince     string   `json:"upSince"`     // INFERRED — validate live
-	Saves       *float64 `json:"saves"`       // INFERRED — validate live
-	SaveSize    *float64 `json:"saveSize"`    // INFERRED — validate live
-	Recovers    *float64 `json:"recovers"`    // INFERRED — validate live
-	RecoverSize *float64 `json:"recoverSize"` // INFERRED — validate live
-	BadSaves    *float64 `json:"badSaves"`    // INFERRED — validate live
-	BadRecovers *float64 `json:"badRecovers"` // INFERRED — validate live
+	UpSince         string   `json:"upSince"`
+	Saves           *float64 `json:"saves"`
+	SaveSize        *nwSize  `json:"saveSize"`
+	Recovers        *float64 `json:"recovers"`
+	RecoverSize     *nwSize  `json:"recoverSize"`
+	BadSaves        *float64 `json:"badSaves"`
+	BadRecovers     *float64 `json:"badRecovers"`
+	CurrentSaves    *float64 `json:"currentSaves"`
+	CurrentRecovers *float64 `json:"currentRecovers"`
+	MaxSaves        *float64 `json:"maxSaves"`
+	MaxRecovers     *float64 `json:"maxRecovers"`
 }
 
 // jobsResponse wraps GET /jobs: {"count":N,"jobs":[...]}.
@@ -29,17 +30,19 @@ type jobsResponse struct {
 	Jobs []nwJob `json:"jobs"`
 }
 
+// nwJob mirrors the swagger 19.13 Job model. The client field is `clientHostname`
+// (not `client`); `level` exists in 19.13 (absent in 19.2 → parsed tolerantly).
+// There is no `group` field on Job.
 type nwJob struct {
-	ID               json.Number `json:"id"`               // may be numeric; rendered as string label
-	Name             string      `json:"name"`             // INFERRED — validate live
-	Type             string      `json:"type"`             // INFERRED — validate live
-	State            string      `json:"state"`            // INFERRED — validate live
-	CompletionStatus string      `json:"completionStatus"` // INFERRED — validate live
-	Client           string      `json:"client"`           // INFERRED — validate live
-	StartTime        string      `json:"startTime"`        // INFERRED — validate live; RFC3339
-	EndTime          string      `json:"endTime"`          // INFERRED — validate live; RFC3339
-	Group            string      `json:"group"`            // INFERRED — validate live
-	Level            string      `json:"level"`            // INFERRED — validate live
+	ID               json.Number `json:"id"` // may be numeric; rendered as string label
+	Name             string      `json:"name"`
+	Type             string      `json:"type"`
+	State            string      `json:"state"`
+	CompletionStatus string      `json:"completionStatus"`
+	ClientHostname   string      `json:"clientHostname"`
+	StartTime        string      `json:"startTime"` // RFC3339
+	EndTime          string      `json:"endTime"`   // RFC3339
+	Level            string      `json:"level"`     // 19.13+ (absent on older servers)
 }
 
 // JobsCollector maps GET /serverstatistics and GET /jobs.
@@ -60,15 +63,19 @@ func (JobsCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]models
 		b.gauge("nsr_server_up_since_timestamp_seconds", "NetWorker server start time (Unix seconds).", ts)
 	}
 	emitCounter(&b, "nsr_server_saves_total", "Cumulative backup attempts.", stats.Saves)
-	emitCounter(&b, "nsr_server_save_size_bytes", "Cumulative bytes written by backups.", stats.SaveSize)
+	emitSizeCounter(&b, "nsr_server_save_size_bytes", "Cumulative bytes written by backups.", stats.SaveSize)
 	emitCounter(&b, "nsr_server_recovers_total", "Cumulative recovery attempts.", stats.Recovers)
-	emitCounter(&b, "nsr_server_recover_size_bytes", "Cumulative bytes restored by recoveries.", stats.RecoverSize)
+	emitSizeCounter(&b, "nsr_server_recover_size_bytes", "Cumulative bytes restored by recoveries.", stats.RecoverSize)
 	emitCounter(&b, "nsr_server_bad_saves_total", "Cumulative failed backup attempts.", stats.BadSaves)
 	emitCounter(&b, "nsr_server_bad_recovers_total", "Cumulative failed recovery attempts.", stats.BadRecovers)
+	emitGauge(&b, "nsr_server_current_saves", "Saves currently running on the server.", stats.CurrentSaves)
+	emitGauge(&b, "nsr_server_current_recovers", "Recoveries currently running on the server.", stats.CurrentRecovers)
+	emitGauge(&b, "nsr_server_max_saves", "Maximum concurrent saves the server allows.", stats.MaxSaves)
+	emitGauge(&b, "nsr_server_max_recovers", "Maximum concurrent recoveries the server allows.", stats.MaxRecovers)
 
 	var jobs jobsResponse
 	if err := c.Get(ctx, "/jobs", nsrclient.QueryOpts{
-		Fields: []string{"id", "name", "type", "state", "completionStatus", "client", "startTime", "endTime", "group", "level"},
+		Fields: []string{"id", "name", "type", "state", "completionStatus", "clientHostname", "startTime", "endTime", "level"},
 	}, &jobs); err != nil {
 		return nil, err
 	}
@@ -79,8 +86,7 @@ func (JobsCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]models
 			lbl("job_type", j.Type),
 			lbl("state", j.State),
 			lbl("completion_status", j.CompletionStatus),
-			lbl("client", j.Client),
-			lbl("group", j.Group),
+			lbl("client", j.ClientHostname),
 			lbl("level", j.Level),
 		)
 		// Absent or unparseable timestamps yield no sample (ADR-0008).
@@ -106,5 +112,13 @@ func (JobsCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]models
 func emitCounter(b *builder, name, help string, v *float64, labels ...models.Label) {
 	if v != nil {
 		b.counter(name, help, *v, labels...)
+	}
+}
+
+// emitSizeCounter appends a counter from a Size object, converting to bytes; an
+// absent object or unknown unit yields no sample (ADR-0008).
+func emitSizeCounter(b *builder, name, help string, s *nwSize, labels ...models.Label) {
+	if v, ok := s.Bytes(); ok {
+		b.counter(name, help, v, labels...)
 	}
 }
