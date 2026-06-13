@@ -155,8 +155,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by (system) (nsr_sessions_total{system=~\"$system\"})",
-          "legendFormat": "{{system}}"
+          "expr": "sum(nsr_sessions_total{system=~\"$system\"})"
         }
       ]
     },
