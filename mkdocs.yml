@@ -20,18 +20,23 @@ theme:
     - navigation.sections
     - content.code.copy
 
+# `search` must be listed explicitly once a plugins block exists (it is only
+# implicit when no plugins are configured). awesome-pages auto-discovers pages
+# from the directory tree so curated sections below stay in sync with disk.
+plugins:
+  - search
+  - awesome-pages
+
 nav:
   - Home: index.md
   - Metrics: metrics.md
   - Dashboards: dashboards.md
   - Deployment:
       - Docker: deployment/docker.md
-  - Architecture Decisions:
-      - Overview: adr/index.md
-      - 0001 Snapshot model: adr/0001-snapshot-collection-model.md
-      - 0003 Hand-rolled client: adr/0003-hand-rolled-rest-client.md
-      - 0007 HTTP Basic auth: adr/0007-http-basic-auth.md
-      - 0010 /backups bounding: adr/0010-backups-bounding.md
+  # `...` (awesome-pages rest token) pulls in everything not listed above —
+  # i.e. the docs/adr/ directory, titled and ordered by docs/adr/.pages. Drop a
+  # new ADR file in and it appears automatically; no mkdocs.yml edit required.
+  - ...
 
 # Keep working notes and the reference PDFs out of the published site so
 # `mkdocs build --strict` doesn't fail on pages that aren't part of the nav.
