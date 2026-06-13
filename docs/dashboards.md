@@ -76,7 +76,7 @@ all systems at once.
 
 Dashboards live under `grafana/dashboards/`:
 
-```
+```text
 grafana/dashboards/
   nsr-overview.json
   nsr-capacity.json

@@ -17,7 +17,7 @@ systems:
     host: "http://mocknw:9090"   # bundled mock; client appends the /nwrestapi/v3/global base path
     username: "${NSR1_USERNAME}"
     password: "${NSR1_PASSWORD}"
-    insecureSkipVerify: true
+    # No insecureSkipVerify: the mock is plain http://, so there is no TLS to skip.
 opentelemetry:
   endpoint: "otel-collector:4317"
   insecure: true   # plain gRPC for the in-compose collector; no TLS needed

@@ -45,7 +45,8 @@ NSR_TAG=0.2.0 NSR1_PASSWORD='...' docker compose -f docker-compose.ghcr.yml up -
 ## Configuration
 
 The exporter reads `/etc/nsr_exporter/config.yaml` inside the container. The compose
-stacks mount `./config.yaml` there. See `config.yaml` for the full schema; key fields:
+stacks mount `./config.demo.yaml` there (so the exporter scrapes the bundled mock);
+mount your own `./config.yaml` for a real target. See `config.yaml` for the full schema; key fields:
 
 | Field | Default | Purpose |
 |---|---|---|
