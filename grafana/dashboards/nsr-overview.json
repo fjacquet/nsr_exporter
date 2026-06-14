@@ -100,7 +100,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by (system) (nsr_alerts_active{system=~\"$system\", priority=\"Critical\"})",
+          "expr": "sum by (system) (nsr_alerts_active{system=~\"$system\", priority=~\"(?i)critical\"})",
           "legendFormat": "{{system}}"
         }
       ]
@@ -131,7 +131,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by (system) (nsr_alerts_active{system=~\"$system\", priority=\"Warning\"})",
+          "expr": "sum by (system) (nsr_alerts_active{system=~\"$system\", priority=~\"(?i)warning\"})",
           "legendFormat": "{{system}}"
         }
       ]
