@@ -12,7 +12,7 @@ builds:
     binary: nsr_exporter
     env:
       - CGO_ENABLED=0
-    goos: [linux, darwin]
+    goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
     flags:
       - -trimpath
@@ -22,6 +22,10 @@ builds:
 
 archives:
   - formats: [tar.gz]
+    # Windows ships as .zip per platform convention (the binary itself gets .exe).
+    format_overrides:
+      - goos: windows
+        formats: [zip]
     name_template: >-
       {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
     files:
