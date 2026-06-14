@@ -16,7 +16,7 @@ dashboard authors applying the wrong aggregation and silently producing nonsense
 All metrics follow these rules:
 
 1. **Prefix**: `nsr_` on every metric name.
-2. **Port**: `9097` (registered for the exporter family). This is the exporter's own
+2. **Port**: `9447` (registered for the exporter family). This is the exporter's own
    `/metrics` port; the NetWorker REST API uses `9090`.
 3. **Unit-explicit suffixes**: `_bytes`, `_seconds`, `_bytes_per_second`, `_total` (for
    true counters). Never expose megabytes, minutes, or percentages as a raw gauge without

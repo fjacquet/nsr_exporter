@@ -18,6 +18,6 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certifi
 RUN adduser -D -u 10001 nsr
 COPY --from=builder /out/nsr_exporter /usr/local/bin/nsr_exporter
 USER 10001
-EXPOSE 9097
+EXPOSE 9447
 ENTRYPOINT ["/usr/local/bin/nsr_exporter"]
 CMD ["--config", "/etc/nsr_exporter/config.yaml"]

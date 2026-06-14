@@ -25,7 +25,7 @@ services:
     container_name: nsr_exporter
     command: ["--config", "/etc/nsr_exporter/config.yaml"]
     ports:
-      - "9097:9097"
+      - "9447:9447"
     volumes:
       - ./config.demo.yaml:/etc/nsr_exporter/config.yaml:ro
     environment:

@@ -22,7 +22,7 @@ design spec is thinner than the family standard.
 A Prometheus + OTLP exporter for **Dell EMC NetWorker** backup servers. A single process
 polls every configured NetWorker system on a background interval, caches an immutable
 snapshot, and serves `/metrics` instantly from cache so scrapes never hit the backend.
-Metric prefix `nsr_`, default port `9097`, every metric carries a `system="<name>"` label.
+Metric prefix `nsr_`, default port `9447`, every metric carries a `system="<name>"` label.
 
 ## Commands (target contract — build these)
 
@@ -76,7 +76,7 @@ collection loop → fetch all systems → build immutable Snapshot → SnapshotS
 startup, never a replacement for `config.yaml`. Shape (from the spec):
 
 ```yaml
-server: { host, port: "9097", uri: /metrics, logName }
+server: { host, port: "9447", uri: /metrics, logName }
 collection: { interval: 5m, timeout: 60s }
 systems:
   - { name, host, username: ${NSR1_USERNAME}, password: ${NSR1_PASSWORD}, insecureSkipVerify }
