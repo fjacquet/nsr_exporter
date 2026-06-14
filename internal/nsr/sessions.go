@@ -13,11 +13,14 @@ type sessionsResponse struct {
 	Sessions []nwSession `json:"sessions"`
 }
 
+// nwSession mirrors the swagger 19.13 Session model. Activity type is `mode`
+// (Saving/Recovering/Browsing); the client field is `clientHostname`; `size` and
+// `transferRate` are unit/value objects, not scalars.
 type nwSession struct {
-	Type   string   `json:"type"`   // INFERRED — validate live (backup/recover/clone)
-	Client string   `json:"client"` // INFERRED — validate live
-	State  string   `json:"state"`  // INFERRED — validate live
-	Bytes  *float64 `json:"size"`   // INFERRED — validate live (bytes moved so far)
+	Mode           string     `json:"mode"`
+	ClientHostname string     `json:"clientHostname"`
+	Size           *nwSize    `json:"size"`
+	TransferRate   *nwBitRate `json:"transferRate"`
 }
 
 // SessionsCollector maps GET /sessions to live-activity metrics.
@@ -30,22 +33,30 @@ func (SessionsCollector) Name() string { return "sessions" }
 func (SessionsCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]models.Sample, error) {
 	var resp sessionsResponse
 	if err := c.Get(ctx, "/sessions", nsrclient.QueryOpts{
-		Fields: []string{"type", "client", "state", "size"},
+		Fields: []string{"mode", "clientHostname", "size", "transferRate"},
 	}, &resp); err != nil {
 		return nil, err
 	}
 
 	var b builder
-	byType := make(map[string]float64)
+	byMode := make(map[string]float64)
 	for _, s := range resp.Sessions {
 		b.gauge("nsr_session_active", "An active NetWorker session (always 1).", 1,
-			lbl("session_type", s.Type), lbl("client", s.Client), lbl("state", s.State))
-		emitGauge(&b, "nsr_session_bytes", "Bytes moved so far by an active session.", s.Bytes,
-			lbl("session_type", s.Type), lbl("client", s.Client))
-		byType[s.Type]++
+			lbl("session_type", s.Mode), lbl("client", s.ClientHostname))
+		// size and transferRate are {unit,value} objects; absent/unknown → no sample.
+		if v, ok := s.Size.Bytes(); ok {
+			b.gauge("nsr_session_bytes", "Bytes moved so far by an active session.", v,
+				lbl("session_type", s.Mode), lbl("client", s.ClientHostname))
+		}
+		if v, ok := s.TransferRate.BytesPerSecond(); ok {
+			b.gauge("nsr_session_transfer_bytes_per_second",
+				"Live transfer rate of an active session (gauge; aggregate with sum/avg, never rate()).", v,
+				lbl("session_type", s.Mode), lbl("client", s.ClientHostname))
+		}
+		byMode[s.Mode]++
 	}
-	for typ, n := range byType {
-		b.gauge("nsr_sessions_total", "Count of active sessions by type.", n, lbl("session_type", typ))
+	for mode, n := range byMode {
+		b.gauge("nsr_active_sessions", "Count of active sessions by mode.", n, lbl("session_type", mode))
 	}
 	return b.out, nil
 }

@@ -18,10 +18,9 @@ func Catalog() []MetricMeta {
 	return []MetricMeta{
 		{"nsr_up", "1 if the system was reachable this cycle, else 0.", models.Gauge},
 		{"nsr_alert_info", "An active NetWorker alert (always 1).", models.Gauge},
-		{"nsr_alerts_total", "Count of active alerts by severity.", models.Gauge},
+		{"nsr_alerts_active", "Count of active alerts by priority.", models.Gauge},
 		{"nsr_client_info", "Metadata about a configured backup client (always 1).", models.Gauge},
 		{"nsr_client_parallelism", "Configured backup stream limit per client.", models.Gauge},
-		{"nsr_client_last_backup_timestamp_seconds", "Unix timestamp of the most recent completed backup for this client.", models.Gauge},
 		{"nsr_server_up_since_timestamp_seconds", "NetWorker server start time (Unix seconds).", models.Gauge},
 		{"nsr_server_saves_total", "Cumulative backup attempts.", models.Counter},
 		{"nsr_server_save_size_bytes", "Cumulative bytes written by backups.", models.Counter},
@@ -29,16 +28,21 @@ func Catalog() []MetricMeta {
 		{"nsr_server_recover_size_bytes", "Cumulative bytes restored by recoveries.", models.Counter},
 		{"nsr_server_bad_saves_total", "Cumulative failed backup attempts.", models.Counter},
 		{"nsr_server_bad_recovers_total", "Cumulative failed recovery attempts.", models.Counter},
+		{"nsr_server_current_saves", "Saves currently running on the server.", models.Gauge},
+		{"nsr_server_current_recovers", "Recoveries currently running on the server.", models.Gauge},
+		{"nsr_server_max_saves", "Maximum concurrent saves the server allows.", models.Gauge},
+		{"nsr_server_max_recovers", "Maximum concurrent recoveries the server allows.", models.Gauge},
 		{"nsr_job_status", "An individual NetWorker job (always 1).", models.Gauge},
 		{"nsr_job_start_timestamp_seconds", "Unix timestamp when the job started.", models.Gauge},
 		{"nsr_job_end_timestamp_seconds", "Unix timestamp when the job ended.", models.Gauge},
 		{"nsr_session_active", "An active NetWorker session (always 1).", models.Gauge},
 		{"nsr_session_bytes", "Bytes moved so far by an active session.", models.Gauge},
-		{"nsr_sessions_total", "Count of active sessions by type.", models.Gauge},
-		{"nsr_volume_capacity_bytes", "Formatted volume capacity.", models.Gauge},
+		{"nsr_session_transfer_bytes_per_second", "Live transfer rate of an active session (gauge).", models.Gauge},
+		{"nsr_active_sessions", "Count of active sessions by mode.", models.Gauge},
+		{"nsr_volume_capacity_bytes", "Volume capacity in bytes.", models.Gauge},
 		{"nsr_volume_written_bytes", "Bytes written to the volume.", models.Gauge},
 		{"nsr_volume_recycled_total", "Times the volume has been recycled.", models.Counter},
-		{"nsr_volume_status", "Volume status as an info gauge (always 1).", models.Gauge},
+		{"nsr_volume_status", "Volume state(s) as an info gauge (always 1).", models.Gauge},
 		{"nsr_datadomain_capacity_total_bytes", "Target Data Domain total size.", models.Gauge},
 		{"nsr_datadomain_capacity_used_bytes", "Data Domain physical capacity used.", models.Gauge},
 		{"nsr_datadomain_capacity_available_bytes", "Data Domain free space.", models.Gauge},
@@ -50,23 +54,16 @@ func Catalog() []MetricMeta {
 		{"nsr_job_bytes_per_second", "Ingest throughput of a backup action.", models.Gauge},
 		// C5 — devices
 		{"nsr_device_info", "A NetWorker backup device (always 1).", models.Gauge},
-		{"nsr_device_capacity_bytes", "Device storage capacity in bytes.", models.Gauge},
 		// C6 — storagenodes
 		{"nsr_storagenode_info", "A NetWorker storage node (always 1).", models.Gauge},
 		{"nsr_storagenode_device_count", "Number of devices attached to this storage node.", models.Gauge},
 		// C7 — pools
-		{"nsr_pool_capacity_bytes", "Total pool capacity in bytes.", models.Gauge},
-		{"nsr_pool_used_bytes", "Used pool capacity in bytes.", models.Gauge},
-		{"nsr_pool_volume_count", "Number of volumes in the pool.", models.Gauge},
+		{"nsr_pool_info", "A configured media pool (always 1).", models.Gauge},
 		// C8 — vmware
 		{"nsr_vmware_info", "A registered VMware vCenter (always 1).", models.Gauge},
-		// C9 — queues
-		{"nsr_queue_depth", "Number of pending items in the queue.", models.Gauge},
-		{"nsr_queue_wait_seconds", "Current wait time in the queue (seconds).", models.Gauge},
-		// C10 — policies
-		{"nsr_policy_enabled", "1 if the protection policy is enabled, else 0.", models.Gauge},
-		{"nsr_policy_client_count", "Number of clients covered by this policy.", models.Gauge},
-		{"nsr_group_client_count", "Number of clients in this protection group.", models.Gauge},
+		// C10 — policies & groups
+		{"nsr_policy_enabled", "1 if any workflow in the protection policy is enabled, else 0.", models.Gauge},
+		{"nsr_group_info", "A protection group (always 1).", models.Gauge},
 	}
 }
 

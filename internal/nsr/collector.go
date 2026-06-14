@@ -54,7 +54,7 @@ func NewCollector(cfg *config.Config, store *SnapshotStore, log *logrus.Logger, 
 	collectors := DefaultCollectors()
 	// SizingCollector is stateful (lookback window + clock), so it is appended here
 	// rather than in the stateless DefaultCollectors set.
-	collectors = append(collectors, SizingCollector{Window: cfg.Collection.BackupWindow, Now: time.Now})
+	collectors = append(collectors, SizingCollector{Window: cfg.Collection.BackupWindow})
 
 	return &Collector{
 		systems:    systems,
@@ -80,7 +80,6 @@ func DefaultCollectors() []ResourceCollector {
 		StorageNodesCollector{},
 		PoolsCollector{},
 		VMwareCollector{},
-		QueuesCollector{},
 		PoliciesCollector{},
 	}
 }

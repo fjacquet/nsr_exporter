@@ -100,7 +100,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by (system) (nsr_alerts_total{system=~\"$system\", severity=\"Critical\"})",
+          "expr": "sum by (system) (nsr_alerts_active{system=~\"$system\", priority=~\"(?i)critical\"})",
           "legendFormat": "{{system}}"
         }
       ]
@@ -131,7 +131,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by (system) (nsr_alerts_total{system=~\"$system\", severity=\"Warning\"})",
+          "expr": "sum by (system) (nsr_alerts_active{system=~\"$system\", priority=~\"(?i)warning\"})",
           "legendFormat": "{{system}}"
         }
       ]
@@ -155,7 +155,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(nsr_sessions_total{system=~\"$system\"})"
+          "expr": "sum(nsr_active_sessions{system=~\"$system\"})"
         }
       ]
     },
@@ -313,42 +313,70 @@
       ]
     },
     {
-      "id": 14,
-      "type": "row",
-      "title": "Infrastructure Snapshot",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 }
-    },
-    {
-      "id": 15,
-      "title": "Stale Clients (>48h)",
+      "id": 20,
+      "title": "Current Saves / Recovers",
       "type": "stat",
-      "description": "Count of clients whose most recent backup is older than 48 hours. time() - nsr_client_last_backup_timestamp_seconds > 172800.",
+      "description": "Live concurrent saves and recovers vs server maximums.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 20 },
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 19 },
       "fieldConfig": {
         "defaults": {
           "unit": "none",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green",  "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red",    "value": 5 }
-            ]
-          },
-          "color": { "mode": "thresholds" }
+          "color": { "mode": "fixed", "fixedColor": "blue" }
         },
         "overrides": []
       },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value" },
       "targets": [
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "count(time() - nsr_client_last_backup_timestamp_seconds{system=~\"$system\"} > 172800) or vector(0)",
-          "legendFormat": "Stale clients"
+          "expr": "nsr_server_current_saves{system=~\"$system\"}",
+          "legendFormat": "{{system}} current saves"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_server_current_recovers{system=~\"$system\"}",
+          "legendFormat": "{{system}} current recovers"
         }
       ]
+    },
+    {
+      "id": 21,
+      "title": "Server Max Saves / Recovers",
+      "type": "stat",
+      "description": "Configured maximum concurrent saves and recovers.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 19 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": { "mode": "fixed", "fixedColor": "green" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_server_max_saves{system=~\"$system\"}",
+          "legendFormat": "{{system}} max saves"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "nsr_server_max_recovers{system=~\"$system\"}",
+          "legendFormat": "{{system}} max recovers"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "row",
+      "title": "Infrastructure Snapshot",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 }
     },
     {
       "id": 16,
@@ -356,7 +384,7 @@
       "type": "stat",
       "description": "Count of backup devices with status=offline. Any offline device turns the panel red.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 20 },
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 24 },
       "fieldConfig": {
         "defaults": {
           "unit": "none",
@@ -387,7 +415,7 @@
       "type": "stat",
       "description": "Count of protection policies with nsr_policy_enabled == 0. Yellow when any policy is disabled.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 20 },
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 24 },
       "fieldConfig": {
         "defaults": {
           "unit": "none",
