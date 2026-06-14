@@ -3,9 +3,9 @@
   "uid": "nsr-capacity",
   "tags": ["networker", "nsr_exporter", "dell", "backup", "capacity"],
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "time": { "from": "now-6h", "to": "now" },
-  "refresh": "5m",
+  "refresh": "1m",
   "timezone": "browser",
   "annotations": { "list": [] },
   "editable": true,
@@ -49,13 +49,14 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
+          "decimals": 1,
           "min": 0,
           "max": 100,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               { "color": "green",  "value": null },
-              { "color": "yellow", "value": 70 },
+              { "color": "orange", "value": 70 },
               { "color": "red",    "value": 85 }
             ]
           },
@@ -83,6 +84,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "bytes",
+          "decimals": 1,
           "color": { "mode": "fixed", "fixedColor": "blue" }
         },
         "overrides": []
@@ -107,11 +109,12 @@
       "fieldConfig": {
         "defaults": {
           "unit": "bytes",
+          "decimals": 1,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               { "color": "red",    "value": null },
-              { "color": "yellow", "value": 1073741824 },
+              { "color": "orange", "value": 1073741824 },
               { "color": "green",  "value": 10737418240 }
             ]
           },
@@ -137,7 +140,13 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 1 },
       "options": { "orientation": "horizontal", "displayMode": "gradient" },
-      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -156,18 +165,64 @@
       ]
     },
     {
+      "id": 11,
+      "title": "Data Domain — Days Until Full",
+      "type": "stat",
+      "description": "Estimated days until each Data Domain reaches capacity, based on a 6-hour linear growth projection. Only meaningful when there is sustained growth; may show 'no data' or very large numbers when growth is flat or negative.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 9 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "d",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",    "value": null },
+              { "color": "orange", "value": 14 },
+              { "color": "green",  "value": 30 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "(nsr_datadomain_capacity_total_bytes{system=~\"$system\"} - nsr_datadomain_capacity_used_bytes{system=~\"$system\"}) / clamp_min(predict_linear(nsr_datadomain_capacity_used_bytes{system=~\"$system\"}[6h], 86400) - nsr_datadomain_capacity_used_bytes{system=~\"$system\"}, 1)",
+          "legendFormat": "{{dd_name}} ({{system}})"
+        }
+      ]
+    },
+    {
       "id": 6,
       "title": "Data Domain Capacity Over Time",
       "type": "timeseries",
       "description": "Physical used and total capacity trend per Data Domain.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 9 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 17 },
       "fieldConfig": {
         "defaults": {
           "unit": "bytes",
+          "decimals": 1,
           "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
         },
         "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "max"]
+        }
       },
       "targets": [
         {
@@ -188,7 +243,7 @@
       "id": 7,
       "type": "row",
       "title": "Volume Capacity",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 }
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 }
     },
     {
       "id": 8,
@@ -196,9 +251,15 @@
       "type": "bargauge",
       "description": "Formatted volume capacity per volume, coloured by pool. type label indicates media type.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
       "options": { "orientation": "horizontal", "displayMode": "gradient" },
-      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -215,9 +276,15 @@
       "type": "bargauge",
       "description": "Bytes already written to each volume. type label indicates media type.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 26 },
       "options": { "orientation": "horizontal", "displayMode": "basic" },
-      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -234,13 +301,13 @@
       "type": "table",
       "description": "Snapshot of capacity, written bytes, and recycles per volume. type label = media type.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 26 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 34 },
       "fieldConfig": {
-        "defaults": { "unit": "bytes" },
+        "defaults": { "unit": "bytes", "decimals": 1 },
         "overrides": [
           {
             "matcher": { "id": "byName", "options": "Recycled" },
-            "properties": [ { "id": "unit", "value": "none" } ]
+            "properties": [ { "id": "unit", "value": "short" } ]
           },
           {
             "matcher": { "id": "byName", "options": "Time" },
