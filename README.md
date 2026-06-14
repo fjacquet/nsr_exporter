@@ -33,7 +33,7 @@ cp config.yaml my.yaml                # point a system at http://127.0.0.1:9090
 NSR1_USERNAME=admin NSR1_PASSWORD=test ./bin/nsr_exporter --config my.yaml --once --debug
 ```
 
-Then scrape `http://localhost:9097/metrics`. See [`docs/metrics.md`](docs/metrics.md) for
+Then scrape `http://localhost:9447/metrics`. See [`docs/metrics.md`](docs/metrics.md) for
 the metric catalog and [`config.yaml`](config.yaml) for configuration.
 
 ## Configuration

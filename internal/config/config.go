@@ -113,7 +113,7 @@ func (c *Config) applyDefaults() error {
 		c.Server.Host = "0.0.0.0"
 	}
 	if c.Server.Port == "" {
-		c.Server.Port = "9097"
+		c.Server.Port = "9447"
 	}
 	if c.Server.URI == "" {
 		c.Server.URI = "/metrics"

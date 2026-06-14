@@ -25,7 +25,7 @@ docker compose up --build
 
 Open Grafana at <http://localhost:3000> (default admin/admin).
 Prometheus UI is at <http://localhost:9090>.
-The exporter metrics endpoint is at <http://localhost:9097/metrics>.
+The exporter metrics endpoint is at <http://localhost:9447/metrics>.
 
 ## Quick start — published image (no build)
 
@@ -50,7 +50,7 @@ mount your own `./config.yaml` for a real target. See `config.yaml` for the full
 
 | Field | Default | Purpose |
 |---|---|---|
-| `server.port` | `9097` | `/metrics` listen port |
+| `server.port` | `9447` | `/metrics` listen port |
 | `collection.interval` | `5m` | Background poll frequency |
 | `collection.timeout` | `60s` | Per-system API deadline |
 | `collection.backupWindow` | `24h` | Bound for `/backups` queries (ADR-0010) |
@@ -103,7 +103,7 @@ increase(nsr_otlp_export_errors_total[5m]) > 0
 ## Health check
 
 ```bash
-curl -s http://localhost:9097/metrics | grep '^nsr_up'
+curl -s http://localhost:9447/metrics | grep '^nsr_up'
 ```
 
 A `1` means the NetWorker system responded in the last collection cycle.

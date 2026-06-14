@@ -5,7 +5,7 @@
 # at startup as a quickstart convenience but never overrides real environment vars.
 server:
   host: "0.0.0.0"
-  port: "9097"        # exporter's own /metrics port (NOT the NetWorker REST port)
+  port: "9447"        # exporter's own /metrics port (NOT the NetWorker REST port)
   uri: "/metrics"
   logName: ""         # "" → stdout
 collection:

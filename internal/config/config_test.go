@@ -19,7 +19,7 @@ func writeTemp(t *testing.T, body string) string {
 
 const validYAML = `
 server:
-  port: "9097"
+  port: "9447"
 collection:
   interval: 2m
   timeout: 30s
