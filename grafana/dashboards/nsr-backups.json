@@ -43,11 +43,11 @@
       "id": 2,
       "title": "Largest Full Backup per Client/Saveset (FETB)",
       "type": "bargauge",
-      "description": "nsr_backup_source_size_bytes — largest Full backup per client and saveset name. Aggregate with sum/avg, NOT rate().",
+      "description": "nsr_backup_source_size_bytes — largest Full backup per client and saveset name.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 10, "w": 12, "x": 0, "y": 1 },
       "options": { "orientation": "horizontal", "displayMode": "gradient" },
-      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "fieldConfig": { "defaults": { "unit": "bytes", "decimals": 1 }, "overrides": [] },
       "targets": [
         {
           "refId": "A",
@@ -66,7 +66,7 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 10, "w": 12, "x": 12, "y": 1 },
       "options": { "orientation": "horizontal", "displayMode": "basic" },
-      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "fieldConfig": { "defaults": { "unit": "bytes", "decimals": 1 }, "overrides": [] },
       "targets": [
         {
           "refId": "A",
@@ -84,9 +84,17 @@
       "description": "Trend of Full backup sizes by client — useful for capacity forecasting.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 11 },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "max"]
+        }
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "bytes",
+          "decimals": 1,
           "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 5 }
         },
         "overrides": []
@@ -116,7 +124,7 @@
       "id": 6,
       "title": "Ingest Throughput by Client",
       "type": "bargauge",
-      "description": "nsr_job_bytes_per_second — ingest throughput per client/job. Aggregate with sum/avg, NEVER rate().",
+      "description": "Gauge — aggregate with sum/avg in PromQL, never rate(). nsr_job_bytes_per_second — ingest throughput per client/job.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
       "options": { "orientation": "horizontal", "displayMode": "gradient" },
@@ -186,9 +194,16 @@
       "id": 9,
       "title": "Throughput Trend Over Time",
       "type": "timeseries",
-      "description": "Ingest throughput per client over time — aggregate gauge, do NOT apply rate().",
+      "description": "Gauge — aggregate with sum/avg in PromQL, never rate(). Ingest throughput per client over time.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 36 },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "max"]
+        }
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "Bps",

@@ -48,7 +48,7 @@
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
+          "unit": "short",
           "color": { "mode": "fixed", "fixedColor": "blue" }
         },
         "overrides": []
@@ -71,7 +71,7 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 9, "x": 6, "y": 1 },
       "options": { "orientation": "horizontal", "displayMode": "basic" },
-      "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
       "targets": [
         {
           "refId": "A",
@@ -86,7 +86,7 @@
       "id": 4,
       "title": "Total Bytes In-Flight",
       "type": "stat",
-      "description": "Sum of nsr_session_bytes across all active sessions — instantaneous gauge, do NOT use rate().",
+      "description": "Gauge — aggregate with sum/avg in PromQL, never rate(). Sum of nsr_session_bytes across all active sessions.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 9, "x": 15, "y": 1 },
       "fieldConfig": {
@@ -113,9 +113,16 @@
       "description": "How many sessions of each type are active at each scrape.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 5 },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "max"]
+        }
+      },
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
+          "unit": "short",
           "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15 }
         },
         "overrides": []
@@ -133,12 +140,20 @@
       "id": 6,
       "title": "Bytes In-Flight Over Time",
       "type": "timeseries",
-      "description": "Total bytes moved by in-flight sessions — instantaneous gauge, NOT a rate.",
+      "description": "Gauge — aggregate with sum/avg in PromQL, never rate(). Total bytes moved by in-flight sessions.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "max"]
+        }
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "bytes",
+          "decimals": 1,
           "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
         },
         "overrides": []
@@ -156,9 +171,16 @@
       "id": 13,
       "title": "Live Transfer Throughput",
       "type": "timeseries",
-      "description": "nsr_session_transfer_bytes_per_second — live throughput per session type. Aggregate with sum/avg, NEVER rate().",
+      "description": "Gauge — aggregate with sum/avg in PromQL, never rate(). nsr_session_transfer_bytes_per_second — live throughput per session type.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "max"]
+        }
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "Bps",
@@ -189,7 +211,7 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
       "options": { "orientation": "horizontal", "displayMode": "gradient" },
-      "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
       "targets": [
         {
           "refId": "A",
@@ -256,23 +278,43 @@
       "id": 11,
       "title": "Alerts by Priority",
       "type": "bargauge",
-      "description": "nsr_alerts_active — count of active alerts grouped by priority.",
+      "description": "nsr_alerts_active — count of active alerts grouped by priority. Green when zero; orange for any warning; red for any critical.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 6, "w": 8, "x": 0, "y": 31 },
       "options": { "orientation": "horizontal", "displayMode": "basic" },
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
+          "unit": "short",
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red",    "value": 5 }
+              { "color": "green",  "value": null },
+              { "color": "orange", "value": 1 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byFrameRefID", "options": "A" },
+            "properties": []
+          },
+          {
+            "matcher": { "id": "byName", "options": "Critical" },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "red",   "value": 1 }
+                  ]
+                }
+              }
             ]
           }
-        },
-        "overrides": []
+        ]
       },
       "targets": [
         {
@@ -291,12 +333,32 @@
       "description": "Count of active alerts over time, grouped by priority.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 6, "w": 16, "x": 8, "y": 31 },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "max"]
+        }
+      },
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
+          "unit": "short",
           "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Critical / __all__" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Warning / __all__" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }
+            ]
+          }
+        ]
       },
       "targets": [
         {

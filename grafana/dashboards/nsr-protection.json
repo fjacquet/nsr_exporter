@@ -48,7 +48,7 @@
       "gridPos": { "h": 4, "w": 8, "x": 0, "y": 1 },
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
+          "unit": "short",
           "color": { "mode": "fixed", "fixedColor": "green" }
         },
         "overrides": []
@@ -67,17 +67,17 @@
       "id": 3,
       "title": "Disabled Policies",
       "type": "stat",
-      "description": "Count of protection policies with nsr_policy_enabled == 0.",
+      "description": "Count of protection policies with nsr_policy_enabled == 0. Red if any policy is disabled.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 8, "x": 8, "y": 1 },
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
+          "unit": "short",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 }
+              { "color": "red",   "value": 1 }
             ]
           },
           "color": { "mode": "thresholds" }
@@ -155,9 +155,13 @@
               {
                 "id": "mappings",
                 "value": [
-                  { "type": "value", "options": { "0": { "text": "DISABLED", "color": "yellow" } } },
-                  { "type": "value", "options": { "1": { "text": "ENABLED",  "color": "green"  } } }
+                  { "type": "value", "options": { "0": { "text": "DISABLED", "color": "red"   } } },
+                  { "type": "value", "options": { "1": { "text": "ENABLED",  "color": "green" } } }
                 ]
+              },
+              {
+                "id": "custom.displayMode",
+                "value": "color-text"
               }
             ]
           },

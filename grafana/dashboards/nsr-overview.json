@@ -3,7 +3,7 @@
   "uid": "nsr-overview",
   "tags": ["networker", "nsr_exporter", "dell", "backup"],
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "time": { "from": "now-6h", "to": "now" },
   "refresh": "1m",
   "timezone": "browser",
@@ -29,6 +29,22 @@
         "includeAll": true,
         "multi": true,
         "current": { "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "staleness_hours",
+        "label": "Staleness SLA (hours)",
+        "type": "custom",
+        "query": "12,24,36,48",
+        "current": { "text": "24", "value": "24" },
+        "options": [
+          { "text": "12", "value": "12", "selected": false },
+          { "text": "24", "value": "24", "selected": true },
+          { "text": "36", "value": "36", "selected": false },
+          { "text": "48", "value": "48", "selected": false }
+        ],
+        "hide": 0,
+        "multi": false,
+        "includeAll": false
       }
     ]
   },
@@ -36,7 +52,7 @@
     {
       "id": 1,
       "type": "row",
-      "title": "System Health",
+      "title": "Action Needed",
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
     },
     {
@@ -45,7 +61,7 @@
       "type": "stat",
       "description": "1 = UP (green), 0 = DOWN (red) per NetWorker system.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
       "fieldConfig": {
         "defaults": {
           "unit": "none",
@@ -64,7 +80,7 @@
         },
         "overrides": []
       },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "legend": { "show": false } },
       "targets": [
         {
           "refId": "A",
@@ -78,9 +94,9 @@
       "id": 3,
       "title": "Critical Alerts",
       "type": "stat",
-      "description": "Count of active Critical alerts by system.",
+      "description": "Count of active Critical alerts by system. Any critical alert turns this panel red.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
       "fieldConfig": {
         "defaults": {
           "unit": "none",
@@ -95,7 +111,7 @@
         },
         "overrides": []
       },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "legend": { "show": false } },
       "targets": [
         {
           "refId": "A",
@@ -109,9 +125,9 @@
       "id": 4,
       "title": "Warning Alerts",
       "type": "stat",
-      "description": "Count of active Warning alerts by system.",
+      "description": "Count of active Warning alerts by system. Any warning alert turns this panel orange.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
       "fieldConfig": {
         "defaults": {
           "unit": "none",
@@ -119,14 +135,14 @@
             "mode": "absolute",
             "steps": [
               { "color": "green",  "value": null },
-              { "color": "yellow", "value": 1 }
+              { "color": "orange", "value": 1 }
             ]
           },
           "color": { "mode": "thresholds" }
         },
         "overrides": []
       },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "legend": { "show": false } },
       "targets": [
         {
           "refId": "A",
@@ -137,12 +153,76 @@
       ]
     },
     {
+      "id": 22,
+      "title": "Stalest Backup Age",
+      "type": "stat",
+      "description": "Age of the oldest last-backup across all jobs on selected systems. Amber >= 24h, red >= 36h.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "orange", "value": 86400 },
+              { "color": "red",    "value": 129600 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "legend": { "show": false } },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "time() - max by(system)(nsr_job_end_timestamp_seconds{system=~\"$system\"})",
+          "legendFormat": "{{system}}"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "title": "Failure Rate 24h",
+      "type": "stat",
+      "description": "Percentage of backup attempts that failed in the past 24h. Green < 1%, amber 1-5%, red > 5%.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red",    "value": 5 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "legend": { "show": false } },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "100 * increase(nsr_server_bad_saves_total{system=~\"$system\"}[24h]) / clamp_min(increase(nsr_server_saves_total{system=~\"$system\"}[24h]), 1)",
+          "legendFormat": "{{system}}"
+        }
+      ]
+    },
+    {
       "id": 5,
       "title": "Active Sessions",
       "type": "stat",
-      "description": "Total active sessions across all types.",
+      "description": "Total active sessions across all types and selected systems.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
       "fieldConfig": {
         "defaults": {
           "unit": "none",
@@ -150,7 +230,7 @@
         },
         "overrides": []
       },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "legend": { "show": false } },
       "targets": [
         {
           "refId": "A",
@@ -160,10 +240,144 @@
       ]
     },
     {
+      "id": 24,
+      "type": "row",
+      "title": "Activity (24h)",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }
+    },
+    {
+      "id": 10,
+      "title": "Backups Attempted 24h",
+      "type": "stat",
+      "description": "Number of backup saves started in the past 24h (increase of nsr_server_saves_total).",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": { "mode": "fixed", "fixedColor": "blue" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "legend": { "show": false } },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "increase(nsr_server_saves_total{system=~\"$system\"}[24h])",
+          "legendFormat": "{{system}}"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Backups Failed 24h",
+      "type": "stat",
+      "description": "Number of failed backup saves in the past 24h (increase of nsr_server_bad_saves_total). Orange when any failure detected.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "orange", "value": 1 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "legend": { "show": false } },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "increase(nsr_server_bad_saves_total{system=~\"$system\"}[24h])",
+          "legendFormat": "{{system}}"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Bytes Written 24h",
+      "type": "stat",
+      "description": "Total bytes written in backup saves over the past 24h (increase of nsr_server_save_size_bytes).",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 5, "x": 8, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "color": { "mode": "fixed", "fixedColor": "green" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "legend": { "show": false } },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "increase(nsr_server_save_size_bytes{system=~\"$system\"}[24h])",
+          "legendFormat": "{{system}}"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Recovers 24h",
+      "type": "stat",
+      "description": "Number of recover operations in the past 24h (increase of nsr_server_recovers_total).",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 13, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": { "mode": "fixed", "fixedColor": "purple" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "legend": { "show": false } },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "increase(nsr_server_recovers_total{system=~\"$system\"}[24h])",
+          "legendFormat": "{{system}}"
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "title": "Server Uptime",
+      "type": "stat",
+      "description": "Time elapsed since NetWorker server process last started (time() - nsr_server_up_since_timestamp_seconds). Grafana auto-scales to hours/days.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 7, "x": 17, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": { "mode": "fixed", "fixedColor": "blue" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "legend": { "show": false } },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "time() - nsr_server_up_since_timestamp_seconds{system=~\"$system\"}",
+          "legendFormat": "{{system}}"
+        }
+      ]
+    },
+    {
       "id": 6,
       "type": "row",
       "title": "Job Status",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 10 }
     },
     {
       "id": 7,
@@ -171,7 +385,7 @@
       "type": "bargauge",
       "description": "Count of jobs grouped by completion_status across selected systems.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 11 },
       "options": { "orientation": "horizontal", "displayMode": "gradient" },
       "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
       "targets": [
@@ -190,7 +404,7 @@
       "type": "bargauge",
       "description": "Count of jobs grouped by job_type.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 11 },
       "options": { "orientation": "horizontal", "displayMode": "basic" },
       "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
       "targets": [
@@ -204,187 +418,18 @@
       ]
     },
     {
-      "id": 9,
-      "type": "row",
-      "title": "Server Statistics",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 }
-    },
-    {
-      "id": 10,
-      "title": "Cumulative Backup Attempts",
-      "type": "stat",
-      "description": "nsr_server_saves_total — cumulative counter.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 15 },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "color": { "mode": "fixed", "fixedColor": "blue" }
-        },
-        "overrides": []
-      },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value" },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "nsr_server_saves_total{system=~\"$system\"}",
-          "legendFormat": "{{system}}"
-        }
-      ]
-    },
-    {
-      "id": 11,
-      "title": "Cumulative Failed Backups",
-      "type": "stat",
-      "description": "nsr_server_bad_saves_total — cumulative counter.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 15 },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "red",   "value": 1 }
-            ]
-          },
-          "color": { "mode": "thresholds" }
-        },
-        "overrides": []
-      },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background" },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "nsr_server_bad_saves_total{system=~\"$system\"}",
-          "legendFormat": "{{system}}"
-        }
-      ]
-    },
-    {
-      "id": 12,
-      "title": "Cumulative Bytes Written",
-      "type": "stat",
-      "description": "nsr_server_save_size_bytes — cumulative counter.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 15 },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "color": { "mode": "fixed", "fixedColor": "green" }
-        },
-        "overrides": []
-      },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value" },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "nsr_server_save_size_bytes{system=~\"$system\"}",
-          "legendFormat": "{{system}}"
-        }
-      ]
-    },
-    {
-      "id": 13,
-      "title": "Cumulative Recover Attempts",
-      "type": "stat",
-      "description": "nsr_server_recovers_total — cumulative counter.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 15 },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "color": { "mode": "fixed", "fixedColor": "purple" }
-        },
-        "overrides": []
-      },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value" },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "nsr_server_recovers_total{system=~\"$system\"}",
-          "legendFormat": "{{system}}"
-        }
-      ]
-    },
-    {
-      "id": 20,
-      "title": "Current Saves / Recovers",
-      "type": "stat",
-      "description": "Live concurrent saves and recovers vs server maximums.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 19 },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "color": { "mode": "fixed", "fixedColor": "blue" }
-        },
-        "overrides": []
-      },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value" },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "nsr_server_current_saves{system=~\"$system\"}",
-          "legendFormat": "{{system}} current saves"
-        },
-        {
-          "refId": "B",
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "nsr_server_current_recovers{system=~\"$system\"}",
-          "legendFormat": "{{system}} current recovers"
-        }
-      ]
-    },
-    {
-      "id": 21,
-      "title": "Server Max Saves / Recovers",
-      "type": "stat",
-      "description": "Configured maximum concurrent saves and recovers.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 19 },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "color": { "mode": "fixed", "fixedColor": "green" }
-        },
-        "overrides": []
-      },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value" },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "nsr_server_max_saves{system=~\"$system\"}",
-          "legendFormat": "{{system}} max saves"
-        },
-        {
-          "refId": "B",
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "nsr_server_max_recovers{system=~\"$system\"}",
-          "legendFormat": "{{system}} max recovers"
-        }
-      ]
-    },
-    {
       "id": 14,
       "type": "row",
-      "title": "Infrastructure Snapshot",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 }
+      "title": "Infra Snapshot",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 }
     },
     {
       "id": 16,
       "title": "Offline Devices",
       "type": "stat",
-      "description": "Count of backup devices with status=offline. Any offline device turns the panel red.",
+      "description": "Count of backup devices with status matching offline (case-insensitive). Any offline device turns the panel red.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 24 },
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 20 },
       "fieldConfig": {
         "defaults": {
           "unit": "none",
@@ -399,12 +444,12 @@
         },
         "overrides": []
       },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "legend": { "show": false } },
       "targets": [
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "count(nsr_device_info{system=~\"$system\", status=\"offline\"}) or vector(0)",
+          "expr": "count(nsr_device_info{system=~\"$system\", status=~\"(?i)offline\"}) or vector(0)",
           "legendFormat": "Offline devices"
         }
       ]
@@ -413,9 +458,9 @@
       "id": 17,
       "title": "Disabled Policies",
       "type": "stat",
-      "description": "Count of protection policies with nsr_policy_enabled == 0. Yellow when any policy is disabled.",
+      "description": "Count of protection policies with nsr_policy_enabled == 0. Orange when any policy is disabled.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 24 },
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 20 },
       "fieldConfig": {
         "defaults": {
           "unit": "none",
@@ -423,20 +468,141 @@
             "mode": "absolute",
             "steps": [
               { "color": "green",  "value": null },
-              { "color": "yellow", "value": 1 }
+              { "color": "orange", "value": 1 }
             ]
           },
           "color": { "mode": "thresholds" }
         },
         "overrides": []
       },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "legend": { "show": false } },
       "targets": [
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "expr": "count(nsr_policy_enabled{system=~\"$system\"} == 0) or vector(0)",
           "legendFormat": "Disabled policies"
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "title": "Stale Clients",
+      "type": "stat",
+      "description": "Count of jobs with no completed backup within the staleness SLA (${staleness_hours}h). Uses job_name as client proxy since nsr_job_end_timestamp_seconds carries job_name not client. Orange when any stale client detected.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 20 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "orange", "value": 1 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "legend": { "show": false } },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "count((time() - max by(job_name)(nsr_job_end_timestamp_seconds{system=~\"$system\"})) > 3600 * ${staleness_hours}) or vector(0)",
+          "legendFormat": "Stale clients"
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "type": "row",
+      "title": "Backup Freshness",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 }
+    },
+    {
+      "id": 28,
+      "title": "Last Backup Age by Job",
+      "type": "table",
+      "description": "Per-job age since last completed backup, sorted descending. Amber >= 24h (86400s), red >= 36h (129600s). Staleness SLA = ${staleness_hours}h.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 25 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "orange", "value": 86400 },
+              { "color": "red",    "value": 129600 }
+            ]
+          },
+          "color": { "mode": "thresholds" },
+          "custom": {
+            "displayMode": "color-background",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "job_name" },
+            "properties": [
+              { "id": "displayName", "value": "Job Name" },
+              { "id": "custom.width", "value": 300 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "system" },
+            "properties": [
+              { "id": "displayName", "value": "System" },
+              { "id": "custom.width", "value": 200 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [
+              { "id": "displayName", "value": "Age Since Last Backup" },
+              { "id": "unit", "value": "s" },
+              { "id": "custom.displayMode", "value": "color-background" }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "sortBy": [{ "displayName": "Age Since Last Backup", "desc": true }],
+        "footer": { "show": false }
+      },
+      "transformations": [
+        {
+          "id": "labelsToFields",
+          "options": { "mode": "columns" }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "__name__": true,
+              "job_id": true
+            },
+            "renameByName": {
+              "job_name": "Job Name",
+              "system": "System",
+              "Value": "Age Since Last Backup"
+            }
+          }
+        }
+      ],
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "time() - max by(job_name, system)(nsr_job_end_timestamp_seconds{system=~\"$system\"})",
+          "legendFormat": "{{system}} / {{job_name}}",
+          "instant": true,
+          "format": "table"
         }
       ]
     }
