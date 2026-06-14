@@ -18,6 +18,14 @@ OTLP observable gauges — read the latest snapshot and never touch the backend.
 server starts **before** the first collection cycle so `/metrics` and `/health` respond
 immediately even while the first (potentially slow) poll runs.
 
+**Per-target graceful degradation.** Systems are polled concurrently (an `errgroup` with
+`SetLimit`), but one system's failure MUST NOT fail the cycle or void the other systems'
+data. Each per-system fetch is isolated: on error it contributes an
+`nsr_up{system="<name>"} = 0` gauge (and emits no other series for that system) while
+healthy systems contribute `nsr_up = 1` plus their full metric set. The snapshot is built
+from whatever succeeded — a partial snapshot is always preferable to no snapshot. `nsr_up`
+is the canonical health signal for alerting on an unreachable or failing target.
+
 ## Consequences
 
 - Backend API load is constant (one poll per interval per system) regardless of scraper

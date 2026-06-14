@@ -20,6 +20,14 @@ The client targets `https://<host>:9090/nwrestapi/v3/global`, uses NetWorker's n
 installs a credential-safe body-only trace hook. Endpoints and auth were validated against
 `dell/ansible-networker` (`plugins/module_utils/*_api.py`, `plugins/modules/clients.py`).
 
+**List responses are wrapped envelopes, not bare arrays.** Every NetWorker list endpoint
+returns `{"count":N,"<resource>":[…]}` where `<resource>` is the endpoint's named
+collection field (`clients`, `alerts`, `volumes`, …). The design spec's "decode JSON
+arrays" is imprecise: decoders MUST unwrap the named field, never `json.Unmarshal` into a
+`[]T` directly. Each collector declares the field name it expects and unwraps exactly that
+key; a missing or renamed field yields an empty collection (and a per-target failure via
+the graceful-degradation path in ADR-0001), never a decode panic.
+
 ## Consequences
 
 - Full control over field projection and the `/backups` bounding strategy (ADR-0010) that
