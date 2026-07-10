@@ -44,6 +44,29 @@ sboms:
     # GoReleaser runs the hook in ./dist, so the module path is one level up.
     args: ["mod", "-licenses", "-json", "-output", "$document", "../"]
 
+dockers_v2:
+  - id: nsr_exporter
+    ids:
+      - nsr_exporter
+    dockerfile: Dockerfile.goreleaser
+    images:
+      - "ghcr.io/fjacquet/nsr_exporter"
+    tags:
+      - "{{ .Version }}"
+      - "{{ .Major }}.{{ .Minor }}"
+      - "{{ if not .Prerelease }}latest{{ end }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    extra_files:
+      - config.yaml
+    labels:
+      org.opencontainers.image.title: "{{ .ProjectName }}"
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.source: "https://github.com/fjacquet/nsr_exporter"
+    sbom: true
+
 homebrew_casks:
   - name: nsr_exporter
     repository:
