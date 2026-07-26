@@ -48,7 +48,11 @@ build:
 	$(GO) build -v ./...
 
 vuln:
-	govulncheck ./...
+	# -scan package (not default symbol): symbol-mode builds an SSA call graph via
+	# x/tools, which panics on Go 1.26 generics ("ForEachElement called on type
+	# containing *types.TypeParam"). package mode keeps package-level reachability
+	# while skipping SSA. Revert to `govulncheck ./...` once x/tools ships a fix.
+	govulncheck -scan package ./...
 
 sbom: ## CycloneDX module SBOM
 	mkdir -p $(DIST)
