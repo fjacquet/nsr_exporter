@@ -60,6 +60,30 @@ mount your own `./config.yaml` for a real target. See `config.yaml` for the full
 an unset variable causes a fail-fast startup error. Use `passwordFile` to supply
 secrets out-of-band without embedding them in the compose environment.
 
+## Health endpoints
+
+| Path | Status | Body | Use it for |
+|---|---|---|---|
+| `/livez` | always `200` | `ok` | Kubernetes `livenessProbe`, the image `HEALTHCHECK` |
+| `/readyz` | always `200` | `ok` | Kubernetes `readinessProbe` |
+| `/health` | always `200` | `starting` before the first collection cycle, `ok` after | A human, or an alerting rule reading the body |
+
+`/livez` and `/readyz` read no collection state at all, so neither can fail because
+a NetWorker system is slow or unreachable — no restart fixes that, and a restart
+would discard the cycle already in progress (ADR-0012). Never point a probe at
+`/metrics`: rendering the full exposition on every tick is needless load and can
+block behind a slow collection cycle.
+
+Both images declare a `HEALTHCHECK` against `/livez`, so `docker ps` reports real
+health:
+
+```bash
+docker inspect --format='{{.State.Health.Status}}' nsr_exporter
+```
+
+Prior to v0.13.0 `/health` answered `503` during the startup window. It no longer
+does — anything scripting against that status code must read the body instead.
+
 ## OTLP push export (optional)
 
 The compose stacks include an `otel-collector` service. The collector exposes two ports:
