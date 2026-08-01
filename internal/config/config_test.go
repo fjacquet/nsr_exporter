@@ -142,3 +142,40 @@ systems:
 		t.Fatalf("passwordFile not loaded/trimmed: %q", cfg.Systems[0].Password)
 	}
 }
+
+// TestLoad_ServerURIReservedPaths pins the fix for the newServer panic on a
+// colliding server.uri: http.ServeMux panics on duplicate pattern registration,
+// and /livez, /readyz and /health are always registered by newServer, so a
+// config pointing server.uri at any of them must fail validation with a clear
+// error instead of crashing the exporter at startup.
+func TestLoad_ServerURIReservedPaths(t *testing.T) {
+	tests := []struct {
+		uri       string
+		wantError bool
+	}{
+		{uri: "/livez", wantError: true},
+		{uri: "/readyz", wantError: true},
+		{uri: "/health", wantError: true},
+		{uri: "/metrics", wantError: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.uri, func(t *testing.T) {
+			body := `
+server:
+  uri: "` + tt.uri + `"
+systems:
+  - name: nsr-01
+    host: h
+    username: u
+    password: p
+`
+			_, err := Load(writeTemp(t, body))
+			if tt.wantError && err == nil {
+				t.Fatalf("Load(uri=%q): got nil error, want error for reserved path", tt.uri)
+			}
+			if !tt.wantError && err != nil {
+				t.Fatalf("Load(uri=%q): got error %v, want nil", tt.uri, err)
+			}
+		})
+	}
+}

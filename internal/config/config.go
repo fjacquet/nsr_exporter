@@ -143,9 +143,21 @@ func (c *Config) applyDefaults() error {
 	return nil
 }
 
+// reservedServerURIs are the health-probe paths newServer always registers on
+// its http.ServeMux, alongside cfg.Server.URI. http.ServeMux panics on
+// duplicate pattern registration, so a server.uri colliding with one of these
+// must be rejected here rather than crash the exporter at startup.
+var reservedServerURIs = []string{"/livez", "/readyz", "/health"}
+
 func (c *Config) validate() error {
 	if len(c.Systems) == 0 {
 		return fmt.Errorf("config defines no systems")
+	}
+	for _, reserved := range reservedServerURIs {
+		if c.Server.URI == reserved {
+			return fmt.Errorf("server.uri %q collides with a reserved health-probe path (reserved: %s)",
+				c.Server.URI, strings.Join(reservedServerURIs, ", "))
+		}
 	}
 	seen := make(map[string]bool, len(c.Systems))
 	for _, s := range c.Systems {
