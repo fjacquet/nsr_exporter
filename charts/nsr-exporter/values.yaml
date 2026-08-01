@@ -47,13 +47,16 @@ resources: {}
   #   cpu: 100m
   #   memory: 128Mi
 
+# Probes are wired to the state-free /livez and /readyz endpoints, never /health
+# (ADR-0012). /health reports collection state and is the right endpoint for a
+# human or an alerting rule; it is the wrong thing to restart a pod over.
 livenessProbe:
   httpGet:
-    path: /health
+    path: /livez
     port: http
 readinessProbe:
   httpGet:
-    path: /health
+    path: /readyz
     port: http
 
 volumes: []

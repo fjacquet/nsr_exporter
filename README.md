@@ -19,7 +19,7 @@ cache — so scrapes never reach the backend. Ships as a static, dependency-free
 - **Dual export** — Prometheus `/metrics` and OTLP push, from the same snapshot.
 - **Multi-system** — one process serves many servers; every metric carries `system="<name>"`.
 - **Safe on large catalogs** — the `/backups` sizing query is time-bounded (never the full catalog).
-- **Operable** — `--once --debug` sample dump, credential-safe `--trace`, SIGHUP reload, `/health`.
+- **Operable** — `--once --debug` sample dump, credential-safe `--trace`, SIGHUP reload, `/health` plus always-200 `/livez` and `/readyz` probes.
 
 ## Quick start
 

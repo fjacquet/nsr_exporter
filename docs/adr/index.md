@@ -13,3 +13,4 @@
 | [0009](0009-metric-naming-and-units.md) | Metric naming & units | Accepted |
 | [0010](0010-backups-bounding.md) | Bounding the /backups sizing query | Accepted |
 | [0011](0011-supply-chain-release-hardening.md) | Supply-chain / release hardening | Accepted |
+| [0012](0012-health-probes-and-container-healthcheck.md) | Health probes & container health check | Accepted |

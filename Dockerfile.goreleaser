@@ -2,12 +2,20 @@
 # CI with open egress, so apk is tolerated here. Non-root USER is mandatory.
 # buildx lays the cross-compiled binary out per-platform as ${TARGETPLATFORM}/nsr_exporter
 # in the build context (multi-arch via dockers_v2).
-FROM alpine:3.24
+# Unpinned per the family standard (spec decision 5, ADR-0012): all fifteen
+# exporter repos share alpine:latest.
+FROM alpine:latest
 RUN apk add --no-cache ca-certificates && adduser -D -u 10001 nsr
 ARG TARGETPLATFORM
 COPY ${TARGETPLATFORM}/nsr_exporter /usr/local/bin/nsr_exporter
 COPY config.yaml /etc/nsr_exporter/config.yaml
 USER 10001
 EXPOSE 9447
+
+# Probes /livez, never /metrics (ADR-0012). 127.0.0.1, never localhost — busybox
+# wget tries ::1 first and the exporter binds IPv4 only.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://127.0.0.1:9447/livez || exit 1
+
 ENTRYPOINT ["/usr/local/bin/nsr_exporter"]
 CMD ["--config", "/etc/nsr_exporter/config.yaml"]

@@ -34,6 +34,14 @@ services:
       - NSR1_PASSWORD=${NSR1_PASSWORD:-demopass}
     depends_on:
       - mocknw
+    # Mirrors the Dockerfile HEALTHCHECK exactly — 127.0.0.1 (busybox wget tries
+    # ::1 first and the exporter binds IPv4 only) and timeout 5s in both places.
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:9447/livez"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
 
   prometheus:
