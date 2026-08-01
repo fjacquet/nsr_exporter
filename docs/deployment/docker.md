@@ -81,8 +81,9 @@ health:
 docker inspect --format='{{.State.Health.Status}}' nsr_exporter
 ```
 
-Prior to v0.13.0 `/health` answered `503` during the startup window. It no longer
-does — anything scripting against that status code must read the body instead.
+Prior to the release containing ADR-0012, `/health` answered `503` during the
+startup window. It no longer does — anything scripting against that status code
+must read the body instead.
 
 ## OTLP push export (optional)
 
