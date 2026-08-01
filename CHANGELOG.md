@@ -10,6 +10,8 @@ summarize each release at the level the commit messages support.
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-08-01
+
 ### Added
 
 - `/livez` and `/readyz` endpoints, both always answering `200 OK` with an `ok`
@@ -29,6 +31,13 @@ summarize each release at the level the commit messages support.
   `/readyz` instead of `/health`.
 - Container base image is `alpine:latest`, unpinned, matching the rest of the
   exporter family; the previous `alpine:3.24` pin is dropped.
+- `grpc` bumped to v1.83.0, closing GO-2026-6061.
+
+### Fixed
+
+- `server.uri` set to `/livez`, `/readyz`, or `/health` now fails config
+  loading with a named-path error instead of panicking at startup on
+  duplicate `http.ServeMux` pattern registration.
 
 ## [0.12.4] - 2026-07-12
 
