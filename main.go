@@ -92,7 +92,7 @@ func run(cfgPath string, debug, once, trace bool) error {
 	defer otlpShutdown()
 
 	// Serve HTTP BEFORE the first collection cycle: the first poll can exceed the
-	// collection timeout and must not stall /metrics or /health (ADR: serve first).
+	// collection timeout and must not stall /metrics, /health or the probes.
 	srv := newServer(cfg, store, reg)
 	go func() {
 		log.WithField("addr", srv.Addr).Info("serving metrics")
@@ -117,19 +117,39 @@ func newServer(cfg *config.Config, store *nsr.SnapshotStore, reg *prometheus.Reg
 	mux := http.NewServeMux()
 	mux.Handle(cfg.Server.URI, promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
-		// Healthy once we have ever published a snapshot.
-		if store.Load().Collected.IsZero() {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_, _ = w.Write([]byte("starting"))
-			return
-		}
-		_, _ = w.Write([]byte("ok"))
+		healthHandler(w, store)
 	})
+	mux.HandleFunc("/livez", staticOKHandler)
+	mux.HandleFunc("/readyz", staticOKHandler)
 	return &http.Server{
 		Addr:              cfg.Server.Host + ":" + cfg.Server.Port,
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
+}
+
+// healthHandler always answers 200 and reports the collection state in the body:
+// "starting" until the first cycle has published a snapshot, "ok" afterwards.
+// It answered 503 during that startup window until ADR-0012; the window is a
+// normal part of starting up (the server serves before the first collect, see
+// ADR-0001), not a failure, and a 503 there made every naive probe restart a
+// perfectly healthy process.
+func healthHandler(w http.ResponseWriter, store *nsr.SnapshotStore) {
+	if store.Load().Collected.IsZero() {
+		_, _ = w.Write([]byte("starting"))
+		return
+	}
+	_, _ = w.Write([]byte("ok"))
+}
+
+// staticOKHandler always answers 200 — no snapshot read, no collection state,
+// nothing that can make it fail once the process is running. /livez and /readyz
+// both use it (ADR-0012): a probe wired here can never be the reason a healthy
+// process gets restarted or pulled from rotation. /health remains the endpoint
+// for anything that wants to know whether collection has actually run.
+func staticOKHandler(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("ok"))
 }
 
 // setupOTLP wires the OTLP push path when an endpoint is configured. The endpoint
