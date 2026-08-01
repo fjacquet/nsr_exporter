@@ -120,8 +120,8 @@ summarize each release at the level the commit messages support.
   dashboards (`nsr-devices`, `nsr-protection`) and extended alert rules
   covering devices, protection, and VMware.
 - ADRs 0002 (modular resource collectors), 0005 (config hot reload), 0006
-  (label-key consistency invariant), 0008 (absent-never-zero parsing), and
-  0011 (supply-chain / release hardening).
+  (label-key consistency invariant), 0008 (absent-never-zero parsing), 0009
+  (metric naming & units), and 0011 (supply-chain / release hardening).
 - `make all` target (ci + cli + sbom + docker).
 
 ### Fixed
