@@ -4,7 +4,7 @@
 # in the build context (multi-arch via dockers_v2).
 # Unpinned per the family standard (spec decision 5, ADR-0012): all fifteen
 # exporter repos share alpine:latest.
-FROM alpine:latest
+FROM docker.io/library/alpine:latest
 RUN apk add --no-cache ca-certificates && adduser -D -u 10001 nsr
 ARG TARGETPLATFORM
 COPY ${TARGETPLATFORM}/nsr_exporter /usr/local/bin/nsr_exporter

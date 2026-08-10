@@ -1,6 +1,6 @@
 # Local/dev multi-stage build. The release image is built by GoReleaser via
 # Dockerfile.goreleaser. Non-root USER is mandatory (CI + semgrep enforce it).
-FROM golang:1.26-alpine AS builder
+FROM docker.io/library/golang:1.26-alpine AS builder
 WORKDIR /src
 # Cache deps first.
 COPY go.mod go.sum ./
@@ -13,7 +13,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}"
 # exporter repos share alpine:latest. This is the one build input whose contents
 # can change between two builds of the same commit; uniformity was chosen over
 # reproducibility, and revisiting it is a family-wide decision.
-FROM alpine:latest
+FROM docker.io/library/alpine:latest
 # Copy the CA bundle from the Debian-based builder rather than `apk add
 # ca-certificates`: apk fetches the index over TLS from the Alpine CDN, which fails
 # behind a corporate MITM proxy because the bare alpine image has no CA bundle yet
