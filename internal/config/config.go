@@ -96,7 +96,10 @@ func Load(path string) (*Config, error) {
 // docker-compose syntax and its meaning: unset OR empty falls back, and the reference
 // never errors. That lets a shipped config.yaml drive a non-secret setting from the
 // environment while still starting on a host that never exported it. Use it only where a
-// safe default exists — a bare ${VAR} keeps the fail-loud behaviour that protects secrets.
+// safe default exists.
+//
+// A bare ${VAR} fails when the variable is UNSET; an exported-but-empty one expands
+// to the empty string, as it always has.
 func expandEnv(s string) (string, error) {
 	var missing []string
 	out := envRef.ReplaceAllStringFunc(s, func(ref string) string {
