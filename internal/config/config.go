@@ -64,7 +64,7 @@ type SystemConfig struct {
 	InsecureSkipVerify bool   `yaml:"insecureSkipVerify"`
 }
 
-var envRef = regexp.MustCompile(`\$\{([A-Za-z_][A-Za-z0-9_]*)\}`)
+var envRef = regexp.MustCompile(`\$\{([A-Za-z_][A-Za-z0-9_]*)(:-[^}]*)?\}`)
 
 // Load reads, expands, and validates the config at path.
 func Load(path string) (*Config, error) {
@@ -91,16 +91,29 @@ func Load(path string) (*Config, error) {
 
 // expandEnv replaces every ${VAR} with its environment value, failing fast on the
 // first unset reference rather than silently producing an empty credential.
+//
+// A reference may carry a fallback as ${VAR:-default}, borrowing the shell /
+// docker-compose syntax and its meaning: unset OR empty falls back, and the reference
+// never errors. That lets a shipped config.yaml drive a non-secret setting from the
+// environment while still starting on a host that never exported it. Use it only where a
+// safe default exists — a bare ${VAR} keeps the fail-loud behaviour that protects secrets.
 func expandEnv(s string) (string, error) {
 	var missing []string
 	out := envRef.ReplaceAllStringFunc(s, func(ref string) string {
-		name := ref[2 : len(ref)-1]
+		sub := envRef.FindStringSubmatch(ref)
+		name, fallback := sub[1], sub[2]
 		val, ok := os.LookupEnv(name)
+		if ok && val != "" {
+			return val
+		}
+		if fallback != "" {
+			return fallback[len(":-"):] // group 2 keeps its ":-" prefix, so "" means absent
+		}
 		if !ok {
 			missing = append(missing, name)
 			return ref
 		}
-		return val
+		return ""
 	})
 	if len(missing) > 0 {
 		return "", fmt.Errorf("unset environment variables referenced in config: %s", strings.Join(missing, ", "))
