@@ -5,7 +5,7 @@ permissions:
   contents: read
 jobs:
   release:
-    uses: fjacquet/ci/.github/workflows/go-release.yml@v1
+    uses: fjacquet/ci/.github/workflows/go-release.yml@v1.2.0
     permissions:
       contents: write
       packages: write
