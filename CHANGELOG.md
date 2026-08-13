@@ -10,6 +10,14 @@ summarize each release at the level the commit messages support.
 
 ## [Unreleased]
 
+### Added
+
+- `${VAR:-default}` fallbacks in config env references, ported from `pscale_exporter`.
+  Shell / docker-compose semantics: the variable falls back when unset *or* empty, and
+  such a reference never aborts startup. A bare `${VAR}` still fails loudly when the
+  variable is *unset*; an exported-but-empty one expands to the empty string, as it
+  always has.
+
 ## [0.13.0] - 2026-08-01
 
 ### Added
