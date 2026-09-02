@@ -11,7 +11,7 @@ COVER       ?= coverage.out
 
 # Pinned tool versions (installed by `make tools`).
 GOLANGCI_VERSION   ?= v2.12.2
-GORELEASER_VERSION ?= v2.16.0
+GORELEASER_VERSION ?= v2.18.0
 
 .DEFAULT_GOAL := sure
 
