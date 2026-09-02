@@ -1,6 +1,6 @@
 module github.com/fjacquet/nsr_exporter
 
-go 1.26.6
+go 1.27.1
 
 require (
 	github.com/go-resty/resty/v2 v2.17.2

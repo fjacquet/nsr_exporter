@@ -1,6 +1,6 @@
 # Local/dev multi-stage build. The release image is built by GoReleaser via
 # Dockerfile.goreleaser. Non-root USER is mandatory (CI + semgrep enforce it).
-FROM docker.io/library/golang:1.26-alpine AS builder
+FROM docker.io/library/golang:1.27-alpine AS builder
 WORKDIR /src
 # Cache deps first.
 COPY go.mod go.sum ./
