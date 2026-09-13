@@ -18,6 +18,32 @@ summarize each release at the level the commit messages support.
   variable is *unset*; an exported-but-empty one expands to the empty string, as it
   always has.
 
+## [0.15.2] - 2026-09-13
+
+### Security
+
+- `google.golang.org/grpc` 1.83.0 -> 1.83.2, fixing **GHSA-2v4p-qf9q-27wj** (HIGH),
+  pulled in by an `otel` 1.45.0 -> 1.46.0 refresh and a broader `go get -u ./... && go
+  mod tidy` module-graph update (goreleaser bumped to v2.18.0 for Go 1.27 in the same
+  change).
+- `golang.org/x/sync` 0.22.0 -> 0.23.0.
+
+### Changed
+
+- Go toolchain moved to 1.27.1; `golangci-lint` bumped to v2.13.2 to match.
+- `fjacquet/ci` reusable workflows (`go-ci`, `go-security`, `go-release`,
+  `docs-publish`) bumped from 1.2.0 to 1.3.0.
+- Dependabot auto-merge enabled for this repo, then hardened: the bot-actor guard now
+  reads `github.event.pull_request.user.login` instead of the spoofable
+  `github.actor`, with the `pull_request_target` trigger justified in-workflow (no
+  checkout step runs with the write-scoped token).
+
+### Fixed
+
+- `make docs` / the Docs workflow failed with `The "awesome-pages" plugin is not
+  installed`; the Makefile `docs:` target now installs `mkdocs-awesome-pages-plugin`
+  via `uvx --with`.
+
 ## [0.13.0] - 2026-08-01
 
 ### Added
