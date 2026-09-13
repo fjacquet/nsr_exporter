@@ -63,7 +63,7 @@ security:  # advisory: reports findings but never blocks the build (CodeQL/osv a
 	uvx semgrep scan --config auto --skip-unknown-extensions || true
 
 docs:
-	uvx --with mkdocs-material --with pymdown-extensions mkdocs build --strict --site-dir site
+	uvx --with mkdocs-material --with pymdown-extensions --with mkdocs-awesome-pages-plugin mkdocs build --strict --site-dir site
 
 coverage-upload:
 	uvx --from codecov-cli codecov upload-process --file $(COVER) || true
