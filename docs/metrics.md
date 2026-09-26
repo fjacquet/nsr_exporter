@@ -25,8 +25,8 @@ nsr_exporter --config real.yaml --once --debug --trace 2>trace.log | sort > samp
 
 | Metric | Type | Labels | Meaning |
 |---|---|---|---|
-| `nsr_client_info` | Gauge (1) | `client_name`, `ndmp`, `scheduled_backup`, `backup_command`, `operating_system` | Configured client metadata |
-| `nsr_client_parallelism` | Gauge | `client_name` | Configured backup stream limit (absent if unset — never 0) |
+| `nsr_client_info` | Gauge (1) | `client_name`, `resource_id`, `ndmp`, `scheduled_backup`, `backup_command`, `operating_system` | Configured client metadata; `resource_id` (added in #36, **breaking**) disambiguates client resources that share a hostname |
+| `nsr_client_parallelism` | Gauge | `client_name`, `resource_id` | Configured backup stream limit (absent if unset — never 0); `resource_id` added in #36, **breaking** |
 
 ## Server & jobs (`/serverstatistics`, `/jobs`)
 
