@@ -10,6 +10,8 @@ summarize each release at the level the commit messages support.
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-09-26
+
 ### Added
 
 - `${VAR:-default}` fallbacks in config env references, ported from `pscale_exporter`.
@@ -17,6 +19,10 @@ summarize each release at the level the commit messages support.
   such a reference never aborts startup. A bare `${VAR}` still fails loudly when the
   variable is *unset*; an exported-but-empty one expands to the empty string, as it
   always has.
+
+### Changed
+
+- Security workflow added (`go-security` via `fjacquet/ci`).
 
 ### Fixed
 
