@@ -18,6 +18,15 @@ summarize each release at the level the commit messages support.
   variable is *unset*; an exported-but-empty one expands to the empty string, as it
   always has.
 
+### Fixed
+
+- **Breaking**: `nsr_client_info` and `nsr_client_parallelism` now carry a `resource_id`
+  label (the client resource's unique `resourceId.id`) in addition to `client_name`.
+  NetWorker allows several client resources to share a hostname (e.g. parallel backup
+  configs), which previously produced duplicate series and a 500 on every `/metrics`
+  scrape (#36). Dashboards or alerts grouping these metrics by `client_name` alone
+  should add `resource_id`. See ADR-0013.
+
 ## [0.15.2] - 2026-09-13
 
 ### Security

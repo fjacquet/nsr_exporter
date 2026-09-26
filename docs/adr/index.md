@@ -14,3 +14,4 @@
 | [0010](0010-backups-bounding.md) | Bounding the /backups sizing query | Accepted |
 | [0011](0011-supply-chain-release-hardening.md) | Supply-chain / release hardening | Accepted |
 | [0012](0012-health-probes-and-container-healthcheck.md) | Health probes & container health check | Accepted |
+| [0013](0013-client-resource-id-label.md) | `resource_id` label on client metrics | Accepted |

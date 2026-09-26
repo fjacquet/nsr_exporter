@@ -217,7 +217,7 @@
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "expr": "nsr_client_parallelism{system=~\"$system\"}",
-          "legendFormat": "{{client_name}}",
+          "legendFormat": "{{client_name}} ({{resource_id}})",
           "instant": true
         }
       ]
@@ -259,6 +259,7 @@
             "excludeByName": { "__name__": true, "job": true, "instance": true },
             "renameByName": {
               "client_name": "Client",
+              "resource_id": "Resource ID",
               "ndmp": "NDMP",
               "scheduled_backup": "Scheduled",
               "backup_command": "Backup Command",
