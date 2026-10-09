@@ -84,7 +84,7 @@ systems:
 
 ## Stack
 
-Go `1.27.1` (patch-pinned). `go-resty/resty/v2`, `prometheus/client_golang` (unchecked
+Go `1.27.2` (patch-pinned). `go-resty/resty/v2`, `prometheus/client_golang` (unchecked
 collector), `go.opentelemetry.io/otel`, `gopkg.in/yaml.v2`, `joho/godotenv`, `spf13/cobra`,
 `sirupsen/logrus`, `golang.org/x/sync/errgroup`. CGO off for release. Multi-stage Dockerfile
 with a **non-root `USER`** (CI-enforced); copy CA certs from the builder, don't `apk add` them.
