@@ -10,6 +10,10 @@ summarize each release at the level the commit messages support.
 
 ## [Unreleased]
 
+### Added
+
+- Series guard: duplicate series, type or help mismatches and invalid label names are repaired before the snapshot is published, so one bad collector can no longer make `/metrics` return HTTP 500. New gauge `nsr_guard_repaired_samples{reason,system}` counts what was repaired; alert `NsrSeriesRepaired` fires when it is above 0.
+
 ## [0.17.0] - 2026-10-27
 
 ### Changed

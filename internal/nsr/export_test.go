@@ -14,6 +14,7 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
+	"github.com/fjacquet/nsr_exporter/internal/models"
 	"github.com/fjacquet/nsr_exporter/internal/nsrclient"
 )
 
@@ -690,6 +691,32 @@ func TestCatalogCoversAllEmittedMetrics(t *testing.T) {
 		if _, ok := known[s.Name]; !ok {
 			t.Errorf("metric %q is emitted by a collector but missing from Catalog()", s.Name)
 		}
+	}
+}
+
+type dupStub struct{}
+
+func (dupStub) Name() string { return "dup" }
+func (dupStub) Collect(context.Context, *nsrclient.Client) ([]models.Sample, error) {
+	s := models.Sample{Name: "nsr_session_active", Help: "h", Type: models.Gauge, Value: 1, Labels: []models.Label{lbl("client", "c")}}
+	return []models.Sample{s, s}, nil
+}
+
+func TestCollectOnce_GuardKeepsMetricsServing(t *testing.T) {
+	srv := mockNetWorker(t)
+	defer srv.Close()
+	c, store := testCollector(srv)
+	c.collectors = []ResourceCollector{dupStub{}}
+	c.CollectOnce(context.Background())
+
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(NewPromCollector(store))
+	fams, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather: %v", err)
+	}
+	if got := familyValue(fams, "nsr_session_active"); got != 1 {
+		t.Fatalf("nsr_session_active = %v, want 1", got)
 	}
 }
 

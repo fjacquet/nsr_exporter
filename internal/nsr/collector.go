@@ -136,6 +136,12 @@ func (c *Collector) CollectOnce(ctx context.Context) {
 	}
 	_ = g.Wait()
 
+	names := make([]string, len(c.systems))
+	for i, sys := range c.systems {
+		names[i] = sys.name
+	}
+	all = guardSamples(all, names, c.log)
+
 	c.store.Swap(&models.Snapshot{Samples: all, Collected: c.now()})
 }
 
