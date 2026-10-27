@@ -10,6 +10,12 @@ summarize each release at the level the commit messages support.
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-10-27
+
+### Changed
+
+- `nsr_session_active` now holds the number of concurrent sessions for a `client` and `session_type`; it was always 1. Alert rules that compare it to 1 need review. Label keys are unchanged.
+
 ### Fixed
 
 - Sessions collector: concurrent sessions on one host (same `client` and `session_type`) no longer produce duplicate series that made `/metrics` return HTTP 500 (#72). They are now aggregated per client and mode: `nsr_session_active` is the session count (was always 1), `nsr_session_bytes` and `nsr_session_transfer_bytes_per_second` are sums.
