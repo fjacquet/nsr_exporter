@@ -13,6 +13,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+
+	"github.com/fjacquet/nsr_exporter/internal/config"
 )
 
 // Default benchmark sizes: the spec's starting guess for a 5,000-client server.
@@ -185,7 +187,8 @@ func TestScaleMockKeepsSystemUp(t *testing.T) {
 }
 
 // TestScaleBudget_5000Clients asserts the spec's 20 MB /metrics cap at the default
-// sizes and the default 24h jobWindow. Timings are logged, not asserted (flaky).
+// sizes and the default jobWindow (config.DefaultJobWindow). Timings are logged, not
+// asserted (flaky).
 func TestScaleBudget_5000Clients(t *testing.T) {
 	if testing.Short() {
 		t.Skip("scale test skipped under -short")
@@ -193,7 +196,7 @@ func TestScaleBudget_5000Clients(t *testing.T) {
 	srv := scaleMock(t, scaleClients, scaleSessions, scaleJobs)
 	defer srv.Close()
 	c, store := testCollector(srv)
-	realClockJobs(c, 24*time.Hour)
+	realClockJobs(c, config.DefaultJobWindow)
 	c.timeout = 5 * time.Minute
 
 	t0 := time.Now()
@@ -236,7 +239,7 @@ func scaleBench(b *testing.B) (*Collector, *prometheus.Registry) {
 	srv := scaleMock(b, scaleClients, scaleSessions, scaleJobs)
 	b.Cleanup(srv.Close)
 	c, store := testCollector(srv)
-	realClockJobs(c, 24*time.Hour)
+	realClockJobs(c, config.DefaultJobWindow)
 	c.timeout = 5 * time.Minute
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(NewPromCollector(store))

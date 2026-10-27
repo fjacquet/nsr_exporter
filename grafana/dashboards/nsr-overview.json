@@ -32,15 +32,14 @@
       },
       {
         "name": "staleness_hours",
-        "label": "Staleness SLA (hours)",
+        "label": "Staleness SLA (hours, below jobWindow)",
         "type": "custom",
-        "query": "12,24,36,48",
+        "query": "12,24,36",
         "current": { "text": "24", "value": "24" },
         "options": [
           { "text": "12", "value": "12", "selected": false },
           { "text": "24", "value": "24", "selected": true },
-          { "text": "36", "value": "36", "selected": false },
-          { "text": "48", "value": "48", "selected": false }
+          { "text": "36", "value": "36", "selected": false }
         ],
         "hide": 0,
         "multi": false,
