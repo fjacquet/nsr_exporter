@@ -32,6 +32,17 @@ groups:
           summary: "NetWorker has Warning alerts ({{ $labels.system }})"
           description: "{{ $value }} Warning alert(s) active on NetWorker system {{ $labels.system }} for over 5 minutes."
 
+  - name: nsr-guard
+    rules:
+      - alert: NsrSeriesRepaired
+        expr: max_over_time(nsr_guard_repaired_samples[15m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "nsr_exporter repaired bad series ({{ $labels.system }})"
+          description: "The series guard repaired {{ $value }} sample(s) for reason {{ $labels.reason }} on system {{ $labels.system }}. A collector emitted a series that would have aborted /metrics; check the exporter logs."
+
   - name: nsr-capacity
     rules:
       - alert: NsrDataDomainCapacityHigh

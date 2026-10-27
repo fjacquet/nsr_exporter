@@ -13,6 +13,7 @@ nsr_exporter --config real.yaml --once --debug --trace 2>trace.log | sort > samp
 | Metric | Type | Labels | Meaning |
 |---|---|---|---|
 | `nsr_up` | Gauge | `system` | 1 if the system was reachable this cycle, else 0 |
+| `nsr_guard_repaired_samples` | Gauge | `reason`, `system` | Samples the series guard dropped or rewrote this cycle because they would abort `/metrics`. `reason` is `duplicate`, `type_mismatch`, `help_mismatch` or `invalid_label`; always emitted, 0 when healthy |
 
 ## Alerts (`/alerts`)
 
