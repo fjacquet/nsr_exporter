@@ -128,7 +128,8 @@ func scaleMock(t testing.TB, clients, sessions, jobs int) *httptest.Server {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		start := now.Add(-time.Duration(i) * 72 * time.Hour / time.Duration(max(jobs, 1)))
+		// float math: time.Duration(i)*72h overflows int64 above ~35,500 jobs.
+		start := now.Add(-time.Duration(float64(i) * float64(72*time.Hour) / float64(max(jobs, 1))))
 		fmt.Fprintf(&b, `{"id":%d,"name":"policy%d","type":"save","state":"Completed","completionStatus":"Succeeded","clientHostname":"client%05d.example.com","startTime":%q,"endTime":%q,"level":"Full"}`,
 			i+1, i%20, i%max(clients, 1), start.Format(time.RFC3339), start.Add(30*time.Minute).Format(time.RFC3339))
 	}
@@ -180,6 +181,52 @@ func TestScaleMockKeepsSystemUp(t *testing.T) {
 	}
 	if got := familyValue(fams, "nsr_up"); got != 1 {
 		t.Fatalf("nsr_up = %v, want 1", got)
+	}
+}
+
+// TestScaleBudget_5000Clients asserts the spec's 20 MB /metrics cap at the default
+// sizes and the default 24h jobWindow. Timings are logged, not asserted (flaky).
+func TestScaleBudget_5000Clients(t *testing.T) {
+	if testing.Short() {
+		t.Skip("scale test skipped under -short")
+	}
+	srv := scaleMock(t, scaleClients, scaleSessions, scaleJobs)
+	defer srv.Close()
+	c, store := testCollector(srv)
+	realClockJobs(c, 24*time.Hour)
+	c.timeout = 5 * time.Minute
+
+	t0 := time.Now()
+	c.CollectOnce(context.Background())
+	collect := time.Since(t0)
+
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(NewPromCollector(store))
+	rec := httptest.NewRecorder()
+	t0 = time.Now()
+	promhttp.HandlerFor(reg, promhttp.HandlerOpts{}).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	render := time.Since(t0)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("/metrics status %d", rec.Code)
+	}
+	t.Logf("collect=%v render=%v body=%d bytes", collect, render, rec.Body.Len())
+	if rec.Body.Len() >= 20*1024*1024 {
+		t.Fatalf("/metrics body = %d bytes, want < 20 MiB", rec.Body.Len())
+	}
+
+	reader := sdkmetric.NewManualReader()
+	if _, err := NewOTLPExporter(store, reader); err != nil {
+		t.Fatalf("otlp: %v", err)
+	}
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(context.Background(), &rm); err != nil {
+		t.Fatalf("otlp collect: %v", err)
+	}
+	if got := otlpValue(&rm, "nsr_up"); got != 1 {
+		t.Fatalf("otlp nsr_up = %v, want 1", got)
+	}
+	if got := otlpValue(&rm, "nsr_collection_duration_seconds"); got <= 0 {
+		t.Fatalf("otlp nsr_collection_duration_seconds = %v, want > 0", got)
 	}
 }
 
