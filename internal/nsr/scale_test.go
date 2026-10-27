@@ -182,11 +182,10 @@ func BenchmarkCollectAndGather(b *testing.B) {
 	var size int
 	for i := 0; i < b.N; i++ {
 		c.CollectOnce(context.Background())
-		if _, err := reg.Gather(); err != nil {
-			b.Fatal(err)
-		}
+		// the promhttp handler gathers and encodes; a separate Gather() would count it twice
 		size = render(b, reg)
 	}
+	b.StopTimer()
 	b.ReportMetric(float64(size), "body_bytes")
 }
 
