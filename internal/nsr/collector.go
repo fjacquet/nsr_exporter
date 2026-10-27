@@ -115,6 +115,7 @@ func (c *Collector) CollectOnce(ctx context.Context) {
 	for _, sys := range c.systems {
 		sys := sys
 		g.Go(func() error {
+			started := time.Now()
 			samples, healthy := c.collectSystem(gctx, sys)
 			up := 0.0
 			if healthy {
@@ -123,6 +124,9 @@ func (c *Collector) CollectOnce(ctx context.Context) {
 			samples = append(samples, models.Sample{
 				Name: "nsr_up", Help: "1 if the system was reachable this cycle, else 0.",
 				Type: models.Gauge, Value: up,
+			}, models.Sample{
+				Name: "nsr_collection_duration_seconds", Help: "Wall-clock seconds spent collecting this system this cycle.",
+				Type: models.Gauge, Value: time.Since(started).Seconds(),
 			})
 			tagged := make([]models.Sample, len(samples))
 			for i, s := range samples {

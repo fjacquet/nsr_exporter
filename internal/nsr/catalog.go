@@ -64,6 +64,7 @@ func Catalog() []MetricMeta {
 		// C10 — policies & groups
 		{"nsr_policy_enabled", "1 if any workflow in the protection policy is enabled, else 0.", models.Gauge},
 		{"nsr_group_info", "A protection group (always 1).", models.Gauge},
+		{"nsr_collection_duration_seconds", "Wall-clock seconds spent collecting this system this cycle.", models.Gauge},
 		// series guard
 		{"nsr_guard_repaired_samples", "Samples the series guard dropped or rewrote this cycle because they would abort /metrics.", models.Gauge},
 	}
