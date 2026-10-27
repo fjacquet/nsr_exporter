@@ -2,7 +2,6 @@ package nsr
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -109,13 +108,14 @@ func (c *Collector) CollectOnce(ctx context.Context) {
 	cctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	var mu sync.Mutex
-	all := make([]models.Sample, 0, 256)
+	// One slot per system, concatenated in config order, so the guard's
+	// "first seen wins" does not depend on goroutine finish order.
+	perSys := make([][]models.Sample, len(c.systems))
 
 	g, gctx := errgroup.WithContext(cctx)
 	g.SetLimit(maxConcurrentSystems)
-	for _, sys := range c.systems {
-		sys := sys
+	for i, sys := range c.systems {
+		i, sys := i, sys
 		g.Go(func() error {
 			started := time.Now()
 			samples, healthy := c.collectSystem(gctx, sys)
@@ -131,16 +131,19 @@ func (c *Collector) CollectOnce(ctx context.Context) {
 				Type: models.Gauge, Value: time.Since(started).Seconds(),
 			})
 			tagged := make([]models.Sample, len(samples))
-			for i, s := range samples {
-				tagged[i] = withSystem(s, sys.name)
+			for j, s := range samples {
+				tagged[j] = withSystem(s, sys.name)
 			}
-			mu.Lock()
-			all = append(all, tagged...)
-			mu.Unlock()
+			perSys[i] = tagged
 			return nil // never fail the group; degradation is per-system
 		})
 	}
 	_ = g.Wait()
+
+	all := make([]models.Sample, 0, 256)
+	for _, s := range perSys {
+		all = append(all, s...)
+	}
 
 	names := make([]string, len(c.systems))
 	for i, sys := range c.systems {
