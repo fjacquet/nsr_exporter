@@ -80,7 +80,7 @@ allocations and peak memory, `Gather()` time, and `/metrics` body size.
 | `/metrics` answers in under 1s | descriptor cache |
 | `/metrics` body under 20 MB | `jobWindow` only |
 
-- The first two are **Fred's** (accepted). The 20 MB figure is **the author's call**: Fred gave no size. A rough estimate of 400–500 bytes per job series puts 50,000 jobs at 20–25 MB before clients, so the cap may fail at the 24h default. The first benchmark run checks this estimate. **If the cap fails at 24h, the choice between per-job detail and the size cap is Fred's**, and the builder stops and asks rather than shrinking the default silently.
+- The first two are **Fred's** (accepted). The 20 MB figure is **the author's call**: Fred gave no size. A rough estimate of 400–500 bytes per job series puts 50,000 jobs at 20–25 MB before clients, so the cap may fail at the 24h default. The first benchmark run checks this estimate. **Decided by Fred: the 20 MB cap wins over per-job detail.** If the cap fails at the 24h default on the reference-scale benchmark, shorten the default `jobWindow` until it passes (state the new default and the measured body size in the PR and the CHANGELOG), rather than raising the cap. Per-job detail inside the window is unchanged.
 - An `httptest` mock answers instantly, so the benchmark measures the exporter's own work, not NetWorker's response time. The first threshold is therefore the exporter's processing budget. To judge real cycle time in production, add a collection-duration self-metric (per system, in seconds); none exists today (builder: check the exporter-standards convention for its name).
 - The PR shows benchmark numbers before and after, and a recommended `jobWindow` for a 5,000-client server.
 
