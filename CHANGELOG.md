@@ -17,7 +17,7 @@ summarize each release at the level the commit messages support.
 
 ### Added
 
-- New option `collection.jobWindow` (default `24h`) bounding `/jobs` with a server-side `q=startTime:["N hours"]` filter plus a client-side cut, so job series no longer grow with the server's whole job history. The `q=` form follows the swagger time-range syntax; live validation is pending. If a server rejects the filter with HTTP 400, the jobs collector returns an error: that system's `nsr_server_*` samples are lost too and its `nsr_up` is 0 until the syntax is corrected.
+- New option `collection.jobWindow` (default `24h`) bounding `/jobs` with a server-side `q=startTime:["N hours"]` filter plus a client-side cut, so job series no longer grow with the server's whole job history. The `q=` form follows the swagger time-range syntax; live validation is pending. If a server rejects the filter with HTTP 400, the jobs collector returns an error: that system's `nsr_server_*` samples are lost too and its `nsr_up` is 0 until the syntax is corrected. The config is rejected when `jobWindow` is below twice `collection.interval` (a shorter window would miss jobs between polls); the unset default follows the interval if twice the interval exceeds 24h.
 - New gauge `nsr_collection_duration_seconds{system}`: wall-clock seconds one collection cycle took for each system.
 - Series guard: duplicate series, type or help mismatches and invalid label names are repaired before the snapshot is published, so one bad collector can no longer make `/metrics` return HTTP 500. New gauge `nsr_guard_repaired_samples{reason,system}` counts what was repaired; alert `NsrSeriesRepaired` fires when it is above 0.
 

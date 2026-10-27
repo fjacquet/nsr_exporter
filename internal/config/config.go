@@ -148,6 +148,11 @@ func (c *Config) applyDefaults() error {
 	}
 	if c.Collection.JobWindow == 0 {
 		c.Collection.JobWindow = 24 * time.Hour
+		// A long poll interval would make the 24h default violate the 2x floor
+		// enforced in validate(); follow the interval rather than reject.
+		if floor := 2 * c.Collection.Interval; c.Collection.JobWindow < floor {
+			c.Collection.JobWindow = floor
+		}
 	}
 	if c.OpenTelemetry.PushInterval == 0 {
 		c.OpenTelemetry.PushInterval = 30 * time.Second
@@ -177,6 +182,12 @@ func (c *Config) validate() error {
 	}
 	if c.Collection.JobWindow < 0 {
 		return fmt.Errorf("collection.jobWindow must not be negative, got %v", c.Collection.JobWindow)
+	}
+	// Shorter than the poll interval, jobs that start and end between two polls are
+	// never seen; twice the interval tolerates one missed cycle.
+	if c.Collection.JobWindow < 2*c.Collection.Interval {
+		return fmt.Errorf("collection.jobWindow (%v) must be at least twice collection.interval (%v)",
+			c.Collection.JobWindow, c.Collection.Interval)
 	}
 	for _, reserved := range reservedServerURIs {
 		if c.Server.URI == reserved {
