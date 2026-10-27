@@ -13,6 +13,7 @@ summarize each release at the level the commit messages support.
 ### Changed
 
 - `nsr_job_status` and `nsr_job_*_timestamp_seconds` now cover only jobs started in the last `collection.jobWindow` (24h by default). NetWorker retains jobs 72h by default, so a default server shows less job history than before; raise `jobWindow` to restore it. A still-running job that started before the window is also dropped.
+- Because `/jobs` is now limited to `jobWindow` (default 24h; NetWorker itself keeps jobs 72h by default), these dashboard panels and this alert only see the last `jobWindow`: "Jobs by Completion Status" and "Jobs by Type" (counts drop to about a third), "Stalest Backup Age", "Stale Clients" and "Last Backup Age by Job" (jobs older than the window disappear, so the staleness options 24/36/48 can never trigger at the default), and the `NsrJobFailed` alert (auto-resolves after the window).
 
 ### Added
 
