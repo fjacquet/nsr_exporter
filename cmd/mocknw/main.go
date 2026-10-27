@@ -8,6 +8,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -28,10 +29,6 @@ var fixtures = map[string]string{
 		{"priority":"critical","category":"Server","message":"Index size threshold exceeded","timestamp":"2026-06-13T08:00:00Z"}
 	]}`,
 	"/serverstatistics": `{"upSince":"2026-06-13T00:00:00Z","saves":12000,"saveSize":{"unit":"KB","value":987654321},"recovers":42,"recoverSize":{"unit":"KB","value":1234567},"badSaves":7,"badRecovers":1,"currentSaves":3,"currentRecovers":0,"maxSaves":64,"maxRecovers":32}`,
-	"/jobs": `{"count":2,"jobs":[
-		{"id":1001,"name":"daily-app01","type":"save","state":"Completed","completionStatus":"Succeeded","clientHostname":"app01.local","startTime":"2026-06-13T01:00:00Z","endTime":"2026-06-13T01:30:00Z","level":"Full"},
-		{"id":1002,"name":"daily-db01","type":"save","state":"Completed","completionStatus":"Failed","clientHostname":"db01.local","startTime":"2026-06-13T02:00:00Z","endTime":"2026-06-13T02:15:00Z","level":"Incr"}
-	]}`,
 	"/sessions": `{"count":1,"sessions":[
 		{"mode":"Saving","clientHostname":"app01.local","size":{"unit":"KB","value":102400},"transferRate":{"unit":"KB/s","value":2048}}
 	]}`,
@@ -68,6 +65,21 @@ var fixtures = map[string]string{
 		{"clientHostname":"app01.local","name":"/data","level":"full","size":{"unit":"Byte","value":536870912000},"saveTime":"2026-06-13T01:00:00Z","retentionTime":"2026-07-13T01:00:00Z","completionTime":"2026-06-13T01:30:00Z"},
 		{"clientHostname":"app01.local","name":"/data","level":"incr","size":{"unit":"Byte","value":10737418240},"saveTime":"2026-06-13T13:00:00Z","retentionTime":"2026-06-20T13:00:00Z","completionTime":"2026-06-13T13:02:00Z"}
 	]}`,
+}
+
+// init builds /jobs relative to process start so jobs stay inside the exporter's
+// jobWindow (the payload is constant for the life of the process).
+func init() {
+	now := time.Now().UTC()
+	ts := func(ago time.Duration) string { return now.Add(-ago).Format(time.RFC3339) }
+	fixtures["/jobs"] = fmt.Sprintf(`{"count":3,"jobs":[
+		{"id":1001,"name":"daily-app01","type":"save","state":"Completed","completionStatus":"Succeeded","clientHostname":"app01.local","startTime":%q,"endTime":%q,"level":"Full"},
+		{"id":1002,"name":"daily-db01","type":"save","state":"Completed","completionStatus":"Failed","clientHostname":"db01.local","startTime":%q,"endTime":%q,"level":"Incr"},
+		{"id":1003,"name":"daily-app01-incr","type":"save","state":"Completed","completionStatus":"Succeeded","clientHostname":"app01.local","startTime":%q,"endTime":%q,"level":"Incr"}
+	]}`,
+		ts(6*time.Hour), ts(5*time.Hour+30*time.Minute),
+		ts(4*time.Hour), ts(3*time.Hour+45*time.Minute),
+		ts(2*time.Hour), ts(1*time.Hour+50*time.Minute))
 }
 
 func main() {
