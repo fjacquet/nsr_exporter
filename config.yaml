@@ -12,7 +12,7 @@ collection:
   interval: "5m"      # background poll frequency
   timeout: "60s"      # per-system API deadline
   backupWindow: "24h" # sizing: only fetch /backups save sets newer than this (ADR-0010)
-  jobWindow: "24h"    # only export /jobs started within this window (NetWorker keeps 72h by default)
+  jobWindow: "48h"    # only export /jobs started within this window (NetWorker keeps 72h by default); at least 2x interval
 systems:
   - name: nsr-prod-01
     host: "https://networker-prod-01.local:9090"   # 9090 = NetWorker REST API port

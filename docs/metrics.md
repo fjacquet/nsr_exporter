@@ -103,7 +103,7 @@ nsr_exporter --config real.yaml --once --debug --trace 2>trace.log | sort > samp
 | `nsr_policy_enabled` | Gauge | `policy` | 1 if the protection policy is enabled, else 0 |
 | `nsr_group_info` | Gauge (1) | `group`, `work_item_type` | A protection group (replaces removed `nsr_group_client_count`) |
 
-`nsr_job_*` series from `/jobs` are bounded by `collection.jobWindow` (default 24h):
+`nsr_job_*` series from `/jobs` are bounded by `collection.jobWindow` (default 48h):
 jobs whose `startTime` is older are neither requested (`q=startTime:["N hours"]`) nor
 exported. The client-side cut keeps a job with an unparseable `startTime`, but the
 server-side `q=` filter will likely exclude jobs that have no `startTime` at all. If the

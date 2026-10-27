@@ -44,6 +44,11 @@ type ServerConfig struct {
 	LogName string `yaml:"logName"`
 }
 
+// DefaultJobWindow is the /jobs lookback used when collection.jobWindow is unset.
+// 48h keeps the dashboard staleness options of 24h and 36h reachable while the
+// scale test (5,000 clients, 50,000 jobs) keeps /metrics under its 20 MB cap.
+const DefaultJobWindow = 48 * time.Hour
+
 // CollectionConfig controls the background poll loop.
 type CollectionConfig struct {
 	Interval time.Duration `yaml:"interval"`
@@ -147,8 +152,8 @@ func (c *Config) applyDefaults() error {
 		c.Collection.BackupWindow = 24 * time.Hour
 	}
 	if c.Collection.JobWindow == 0 {
-		c.Collection.JobWindow = 24 * time.Hour
-		// A long poll interval would make the 24h default violate the 2x floor
+		c.Collection.JobWindow = DefaultJobWindow
+		// A long poll interval would make the default violate the 2x floor
 		// enforced in validate(); follow the interval rather than reject.
 		if floor := 2 * c.Collection.Interval; c.Collection.JobWindow < floor {
 			c.Collection.JobWindow = floor

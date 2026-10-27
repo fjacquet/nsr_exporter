@@ -59,8 +59,8 @@ func TestConfig_JobWindowDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if cfg.Collection.JobWindow != 24*time.Hour {
-		t.Fatalf("default jobWindow = %v, want 24h", cfg.Collection.JobWindow)
+	if cfg.Collection.JobWindow != DefaultJobWindow || DefaultJobWindow != 48*time.Hour {
+		t.Fatalf("default jobWindow = %v (DefaultJobWindow %v), want 48h", cfg.Collection.JobWindow, DefaultJobWindow)
 	}
 	cfg, err = Load(writeTemp(t, strings.Replace(validYAML, "timeout: 30s", "timeout: 30s\n  jobWindow: 6h", 1)))
 	if err != nil {
@@ -99,17 +99,17 @@ func TestConfig_JobWindowAtLeastTwiceInterval(t *testing.T) {
 	}
 }
 
-// With a long poll interval the 24h default would itself violate the floor, so the
+// With a long poll interval the default would itself violate the floor, so the
 // default follows the interval instead of rejecting a config that sets no jobWindow.
 func TestConfig_JobWindowDefaultFollowsLongInterval(t *testing.T) {
 	t.Setenv("TEST_NSR_USER", "admin")
 	t.Setenv("TEST_NSR_PASS", "s3cret")
-	cfg, err := Load(writeTemp(t, strings.Replace(validYAML, "interval: 2m", "interval: 24h", 1)))
+	cfg, err := Load(writeTemp(t, strings.Replace(validYAML, "interval: 2m", "interval: 48h", 1)))
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if cfg.Collection.JobWindow != 48*time.Hour {
-		t.Fatalf("default jobWindow = %v, want 48h (2 x interval)", cfg.Collection.JobWindow)
+	if cfg.Collection.JobWindow != 96*time.Hour {
+		t.Fatalf("default jobWindow = %v, want 96h (2 x interval)", cfg.Collection.JobWindow)
 	}
 }
 
