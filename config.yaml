@@ -11,7 +11,7 @@ server:
 collection:
   interval: "5m"      # background poll frequency
   timeout: "60s"      # per-system API deadline
-  backupWindow: "24h" # sizing: only fetch /backups save sets newer than this (ADR-0010)
+  backupWindow: "24h" # sizing: only fetch /backups save sets newer than this (ADR-0010); at least 2x interval
   jobWindow: "48h"    # only export /jobs started within this window (NetWorker keeps 72h by default); at least 2x interval
 systems:
   - name: nsr-prod-01

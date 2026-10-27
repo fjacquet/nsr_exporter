@@ -150,6 +150,11 @@ func (c *Config) applyDefaults() error {
 	}
 	if c.Collection.BackupWindow == 0 {
 		c.Collection.BackupWindow = 24 * time.Hour
+		// Same as jobWindow: follow a long poll interval instead of rejecting a
+		// config that sets no backupWindow.
+		if floor := 2 * c.Collection.Interval; c.Collection.BackupWindow < floor {
+			c.Collection.BackupWindow = floor
+		}
 	}
 	if c.Collection.JobWindow == 0 {
 		c.Collection.JobWindow = DefaultJobWindow
@@ -184,6 +189,13 @@ var reservedServerURIs = []string{"/livez", "/readyz", "/health"}
 func (c *Config) validate() error {
 	if len(c.Systems) == 0 {
 		return fmt.Errorf("config defines no systems")
+	}
+	if c.Collection.BackupWindow < 0 {
+		return fmt.Errorf("collection.backupWindow must not be negative, got %v", c.Collection.BackupWindow)
+	}
+	if c.Collection.BackupWindow < 2*c.Collection.Interval {
+		return fmt.Errorf("collection.backupWindow (%v) must be at least twice collection.interval (%v)",
+			c.Collection.BackupWindow, c.Collection.Interval)
 	}
 	if c.Collection.JobWindow < 0 {
 		return fmt.Errorf("collection.jobWindow must not be negative, got %v", c.Collection.JobWindow)
