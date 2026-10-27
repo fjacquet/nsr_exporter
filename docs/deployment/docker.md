@@ -54,7 +54,7 @@ mount your own `./config.yaml` for a real target. See `config.yaml` for the full
 | `collection.interval` | `5m` | Background poll frequency |
 | `collection.timeout` | `60s` | Per-system API deadline |
 | `collection.backupWindow` | `24h` | Bound for `/backups` queries (ADR-0010) |
-| `collection.jobWindow` | `24h` | Bound for `/jobs`: only jobs started within this window are exported. NetWorker itself keeps jobs 72h by default (jobsdb retention), so 24h hides the older two thirds of a default server's history; a still-running job that began before the window is also dropped |
+| `collection.jobWindow` | `24h` | Bound for `/jobs`: only jobs started within this window are exported. NetWorker itself keeps jobs 72h by default (jobsdb retention), so 24h hides the older two thirds of a default server's history; a still-running job that began before the window is also dropped. If the server rejects the `q=` filter with HTTP 400, the jobs collector fails: that system's `nsr_server_*` samples are lost too and its `nsr_up` is 0 until the syntax is corrected |
 | `systems[].insecureSkipVerify` | `false` | Skip TLS verification (dev only) |
 
 `${ENV_VAR}` references in `host`, `username`, and `password` expand at load time;

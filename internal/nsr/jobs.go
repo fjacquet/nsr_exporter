@@ -62,6 +62,8 @@ func (JobsCollector) Name() string { return "jobs" }
 // within the lookback window. The swagger 19.13 time-range form
 // AttributeName:["N hours"] is the documented syntax; live-server validation of
 // startTime on /jobs is pending, so a correction touches only this function.
+// If the server rejects the filter with HTTP 400, Collect returns an error, so the
+// same collector's nsr_server_* samples are lost and nsr_up is 0 until it is fixed.
 func jobWindowFilter(window time.Duration) string {
 	hours := int(window.Hours())
 	if hours < 1 {
