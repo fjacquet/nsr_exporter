@@ -39,11 +39,18 @@ A new step in `CollectOnce` runs **after** the `system` label is applied and
 `system` is part of the key.
 
 - Detect duplicate series: same metric name and same label set. The key must not depend on label order (sort label keys).
-- Also guard the other conditions that abort `Registry.Gather()` in `client_golang`. The builder must read `registry.go` (`processMetric`, `checkMetricConsistency`) and enumerate them. Expected: duplicate series, inconsistent label-key sets within one metric family, and help or type mismatch within a family. This matches the label-key invariant in ADR-0006.
-- On a hit: drop the offending sample (keep the first), log it once per cycle with metric name and collector, and count it in a self-metric. The cycle still publishes; `nsr_up` is unchanged.
-- Test: feed a synthetic snapshot containing each error class and assert `Gather()` succeeds and the good samples remain. Also assert via an OTLP `ManualReader`, per the dual-export rule.
+- Also guard the other conditions that abort `Registry.Gather()`. Checked in `client_golang` `registry.go` (`processMetric`, `checkMetricConsistency`) on 2026-10-27, for an **unchecked** collector like `PromCollector`:
+  - duplicate series (same name and label set): **aborts** — drop the later sample;
+  - type mismatch within a metric family (e.g. gauge then counter): **aborts** — drop the later sample;
+  - help text differing within a family: **aborts** — do not drop; rewrite the later sample's help to the first-seen text;
+  - duplicate or invalid label names, non-UTF-8 label values: **abort** — drop the sample;
+  - label-key sets differing within a family: does **not** abort an unchecked collector (`checkDescConsistency` only runs for registered descriptors). The guard must **not** drop these; ADR-0006's invariant stays enforced by tests, not by the guard.
+  - the builder must also check `checkSuffixCollisions` (metric names that collide on `_total`, `_count`, etc.) and decide whether it needs a class of its own.
+- On a hit: apply the action above, log it once per metric name per cycle, and expose it in a self-metric. The cycle still publishes; `nsr_up` is unchanged.
+- The guard turns a loud HTTP 500 into a quiet undercount, so it ships with its own visibility: a new alert in `deploy/prometheus/nsr.rules.yml` on the self-metric, an entry in `catalog.go` (`TestCatalogCoversAllEmittedMetrics` requires it), and a row in `docs/metrics.md`.
+- Test: feed a synthetic snapshot containing each error class and assert `Gather()` succeeds, good samples remain, and a label-key mismatch is left untouched. Also assert via an OTLP `ManualReader`, per the dual-export rule.
 
-Self-metric name and unit follow the exporter-standards family convention (builder's call; check the skill).
+Self-metric: a **per-cycle gauge** `{system, reason}` holding the number of samples fixed or dropped in the last cycle. It lives in the snapshot, so it needs no state outside it and resets cleanly on reload (a counter would need state outside the immutable snapshot). Final name and unit follow the exporter-standards family convention (builder's call; check the skill).
 
 ### C. Scale and performance for 5,000 clients, with a bounded `/jobs`
 
@@ -54,32 +61,38 @@ allocations and peak memory, `Gather()` time, and `/metrics` body size.
 
 **Decided changes:**
 
-- `/jobs` is currently read without any filter, and each job emits series carrying a `job_id` label, so cardinality grows with all history. Add a config option `collection.jobWindow` (duration, **default 24h**, same pattern as `backupWindow` in `internal/config/config.go`) and bound `/jobs` with a `q=` filter on `startTime`, modeled on `backupWindowFilter` in `sizing.go` (relative range form; isolate it in one function). The swagger lists a time-range filter parameter for `/jobs`; the builder must confirm the exact `q=` syntax for `startTime` in `docs/swagger/swagger-v3.yaml`.
-- Inside the window, per-job series keep their full detail. Operators shorten the window to trade detail for size. No other knob (no job cap, no aggregate-only mode) unless measurement shows a need.
-- Document the option in `config.yaml`, `config.demo.yaml`, the Helm chart values if it exposes `backupWindow`, and `docs/`.
+- `/jobs` is currently read without any filter, and each job emits about three series carrying a `job_id` label (`jobs.go`), so cardinality grows with all history. Add a config option `collection.jobWindow` (duration, **default 24h**, same pattern as `backupWindow` in `internal/config/config.go`, which replaces an unset or zero value with the default) and bound `/jobs` with a `q=` filter on `startTime`, modeled on `backupWindowFilter` in `sizing.go` (relative range form; isolate it in one function). The swagger lists a time-range filter parameter for `/jobs`; the builder must confirm the exact `q=` syntax for `startTime` in `docs/swagger/swagger-v3.yaml`.
+- Also cut client-side with the existing `parseTime`: drop any returned job whose `startTime` is older than the window. If the server ignores `q=`, the cardinality bound still holds, for one comparison per job. Failure mode to note in the code and docs: if the filter syntax is wrong and the server answers 400, `jobs.go` returns an error and the `/serverstatistics` samples fetched by the same collector are lost too.
+- Inside the window, per-job series keep their full detail. Operators shorten the window to trade detail for size. No other knob (no job cap, no aggregate-only mode, no "unbounded" value) unless measurement shows a need.
+- Document the option in `config.yaml`, `config.demo.yaml`, the Helm chart values if it exposes `backupWindow`, and `docs/`. Add a CHANGELOG "Changed" entry: the 24h cut is a visible change from today's unbounded fetch. Dashboards and the `NsrJobFailed`-style rule (`nsr_job_status{completion_status="Failed"}`) were checked and use only recent jobs, so they are not affected; the builder re-greps `grafana/` and `deploy/prometheus/` for `nsr_job_*` before merging.
 
 **Candidates, only if the benchmark shows they matter:**
 
-- Collectors run one after another inside one shared 60s `CollectOnce` timeout, so one slow endpoint starves later ones and flips `nsr_up` to 0. Options: run a system's collectors concurrently with a per-collector timeout.
+- Collectors run one after another inside one shared 60s `CollectOnce` timeout, so one slow endpoint starves later ones and flips `nsr_up` to 0. Option: run a system's collectors concurrently with a per-collector timeout, with a **small cap on in-flight requests per system** (start at 3–4). On a 5,000-client server the NetWorker REST API is the likely bottleneck, and 11 parallel requests could make it worse.
 - `PromCollector` builds a `prometheus.NewDesc` per sample on every scrape. Cache descriptors only if scrape time or allocations justify it.
-- NetWorker supports optional `PageSize` and `PageNumber` on list endpoints. Per the swagger, by default **all results come back in one page**, so missing pagination does not lose data; the risk is payload size, memory and timeouts. Chunking with `PageSize` is a possible response to measured memory or timeout problems, not a correctness fix. This is per swagger and is not confirmed on a live server.
+- NetWorker supports optional `PageSize` and `PageNumber` on list endpoints. Per the swagger, by default **all results come back in one page**, so missing pagination does not lose data; the risk is payload size, memory and timeouts. Chunking with `PageSize` helps when a single request times out; it does not reduce memory once the pages are accumulated. This is per swagger and is not confirmed on a live server.
 
-Success for C, at the reference scale (5,000 clients):
+**Thresholds, at the reference scale (5,000 clients), and the lever for each:**
 
-- a full collection cycle takes less than 50% of `collection.timeout` (30s of the default 60s);
-- `/metrics` answers in under 1s;
-- the `/metrics` body stays under 20 MB (**the author's call**: Fred accepted the other two thresholds and gave no figure for size; revisit once the first benchmark shows real sizes);
-- the PR shows benchmark numbers before and after, and a recommended `jobWindow` for a 5,000-client server.
+| Threshold | Lever |
+| --- | --- |
+| Exporter's own processing of a cycle (decode, build, guard, swap) takes less than 50% of `collection.timeout` | concurrent collectors; `PageSize` if one request times out |
+| `/metrics` answers in under 1s | descriptor cache |
+| `/metrics` body under 20 MB | `jobWindow` only |
 
-If a threshold is missed, the candidate changes above become required, in the order concurrent collectors, `PageSize` chunking, descriptor cache, and only as far as needed to pass.
+- The first two are **Fred's** (accepted). The 20 MB figure is **the author's call**: Fred gave no size. A rough estimate of 400–500 bytes per job series puts 50,000 jobs at 20–25 MB before clients, so the cap may fail at the 24h default. The first benchmark run checks this estimate. **If the cap fails at 24h, the choice between per-job detail and the size cap is Fred's**, and the builder stops and asks rather than shrinking the default silently.
+- An `httptest` mock answers instantly, so the benchmark measures the exporter's own work, not NetWorker's response time. The first threshold is therefore the exporter's processing budget. To judge real cycle time in production, add a collection-duration self-metric (per system, in seconds); none exists today (builder: check the exporter-standards convention for its name).
+- The PR shows benchmark numbers before and after, and a recommended `jobWindow` for a 5,000-client server.
+
+If a threshold is missed, the candidate changes above become required, in the order concurrent collectors, `PageSize` chunking, descriptor cache, and only as far as needed to pass. Only `jobWindow` moves the body size.
 
 ## Calls made by the author (not yet confirmed by Fred — check these)
 
 - **Long-running jobs.** `jobWindow` filters on `startTime`, so a job that started before the cutoff and is still running drops out of the per-job series. Accepted: live work stays visible through `/sessions` (`nsr_session_*`) and `nsr_server_current_saves` / `nsr_server_current_recovers`. The builder must not add an "or still running" clause unless the swagger shows the API can express it.
-- **`jobWindow: 0` means unbounded**, which is today's behavior, for operators who want the old behavior back. The default is 24h (confirmed by Fred).
+- **No "unbounded" value for `jobWindow`.** Fred did not ask for one, and the `backupWindow` pattern turns 0 into the default (yaml.v2 cannot tell an omitted field from 0). The default is 24h (confirmed by Fred).
 - **Server-side retention.** The swagger says NetWorker prunes job records after the `jobsdb retention` setting (default 72h). A 24h window is therefore a visible cut of history on a default server, and no cut at all if retention is shorter. Document this next to the option.
-- **Guard ordering.** "Keep the first" means first in collector order and API response order, which is fixed for a given backend response. No sorting is added. For a label-key-set or help/type mismatch, the first-seen definition of the family wins and later samples that disagree are dropped.
-- **Guard self-metric.** A counter with labels `{system, reason}` (reason is one of the error classes), obeying the label-key invariant. The log line names the metric and is emitted once per metric name per cycle. The collector name is not available at that point, so it is not a label.
+- **Guard ordering.** "Keep the first" means first in collector order and API response order, which is fixed for a given backend response. No sorting is added. For a duplicate or type mismatch, the first-seen sample or family type wins and later samples that disagree are dropped; for a help mismatch, the later sample is kept with the first-seen help.
+- **Guard self-metric.** A per-cycle gauge with labels `{system, reason}` (reason is one of the error classes), obeying the label-key invariant. The log line names the metric and is emitted once per metric name per cycle. The collector name is not available at that point, so it is not a label.
 
 ## Goals, non-goals, anti-goals
 
