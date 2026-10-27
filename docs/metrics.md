@@ -113,8 +113,9 @@ the config today.
 
 ## Sizing & capacity forecasting (bounded `/backups`)
 
-The `/backups` query is **bounded** by `collection.backupWindow` (default 24h) — the
-full catalog is never fetched (ADR-0010). The `q=` savetime syntax and `level`
+The `/backups` query is **bounded** by `collection.backupWindow` (default 24h, or twice
+`collection.interval` if larger) — the full catalog is never fetched (ADR-0010). The
+config is rejected when `backupWindow` is below twice `collection.interval`. The `q=` savetime syntax and `level`
 vocabulary are INFERRED (see `sizing.go`) pending live validation.
 
 | Metric | Type | Labels | Meaning |
