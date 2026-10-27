@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/sirupsen/logrus"
 
@@ -107,7 +108,7 @@ func guardSamples(samples []models.Sample, systems []string, log *logrus.Logger)
 func validLabels(labels []models.Label) bool {
 	keys := make(map[string]struct{}, len(labels))
 	for _, l := range labels {
-		if !validLabelName.MatchString(l.Key) || strings.HasPrefix(l.Key, "__") {
+		if !validLabelName.MatchString(l.Key) || strings.HasPrefix(l.Key, "__") || !utf8.ValidString(l.Value) {
 			return false
 		}
 		if _, dup := keys[l.Key]; dup {

@@ -2,7 +2,6 @@ package nsr
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -52,9 +51,12 @@ func NewCollector(cfg *config.Config, store *SnapshotStore, log *logrus.Logger, 
 		systems = append(systems, system{name: s.Name, client: client})
 	}
 	collectors := DefaultCollectors()
-	// SizingCollector is stateful (lookback window + clock), so it is appended here
-	// rather than in the stateless DefaultCollectors set.
-	collectors = append(collectors, SizingCollector{Window: cfg.Collection.BackupWindow})
+	// SizingCollector and JobsCollector are stateful (lookback window), so they are
+	// appended here rather than in the stateless DefaultCollectors set.
+	collectors = append(collectors,
+		SizingCollector{Window: cfg.Collection.BackupWindow},
+		JobsCollector{Window: cfg.Collection.JobWindow},
+	)
 
 	return &Collector{
 		systems:    systems,
@@ -68,12 +70,11 @@ func NewCollector(cfg *config.Config, store *SnapshotStore, log *logrus.Logger, 
 }
 
 // DefaultCollectors is the canonical set of stateless resource collectors. The
-// stateful SizingCollector is added separately by NewCollector.
+// stateful SizingCollector and JobsCollector are added separately by NewCollector.
 func DefaultCollectors() []ResourceCollector {
 	return []ResourceCollector{
 		AlertsCollector{},
 		ClientsCollector{},
-		JobsCollector{},
 		SessionsCollector{},
 		StorageCollector{},
 		DevicesCollector{},
@@ -107,14 +108,16 @@ func (c *Collector) CollectOnce(ctx context.Context) {
 	cctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	var mu sync.Mutex
-	all := make([]models.Sample, 0, 256)
+	// One slot per system, concatenated in config order, so the guard's
+	// "first seen wins" does not depend on goroutine finish order.
+	perSys := make([][]models.Sample, len(c.systems))
 
 	g, gctx := errgroup.WithContext(cctx)
 	g.SetLimit(maxConcurrentSystems)
-	for _, sys := range c.systems {
-		sys := sys
+	for i, sys := range c.systems {
+		i, sys := i, sys
 		g.Go(func() error {
+			started := time.Now()
 			samples, healthy := c.collectSystem(gctx, sys)
 			up := 0.0
 			if healthy {
@@ -123,18 +126,24 @@ func (c *Collector) CollectOnce(ctx context.Context) {
 			samples = append(samples, models.Sample{
 				Name: "nsr_up", Help: "1 if the system was reachable this cycle, else 0.",
 				Type: models.Gauge, Value: up,
+			}, models.Sample{
+				Name: "nsr_collection_duration_seconds", Help: "Wall-clock seconds spent collecting this system this cycle.",
+				Type: models.Gauge, Value: time.Since(started).Seconds(),
 			})
 			tagged := make([]models.Sample, len(samples))
-			for i, s := range samples {
-				tagged[i] = withSystem(s, sys.name)
+			for j, s := range samples {
+				tagged[j] = withSystem(s, sys.name)
 			}
-			mu.Lock()
-			all = append(all, tagged...)
-			mu.Unlock()
+			perSys[i] = tagged
 			return nil // never fail the group; degradation is per-system
 		})
 	}
 	_ = g.Wait()
+
+	all := make([]models.Sample, 0, 256)
+	for _, s := range perSys {
+		all = append(all, s...)
+	}
 
 	names := make([]string, len(c.systems))
 	for i, sys := range c.systems {

@@ -95,7 +95,7 @@ func mockNetWorker(t *testing.T) *httptest.Server {
 func testCollector(srv *httptest.Server) (*Collector, *SnapshotStore) {
 	client := nsrclient.New(nsrclient.Options{Name: "nsr-test", Host: srv.URL, Username: "u", Password: "p"})
 	store := NewSnapshotStore()
-	collectors := append(DefaultCollectors(), SizingCollector{Window: 24 * time.Hour})
+	collectors := append(DefaultCollectors(), SizingCollector{Window: 24 * time.Hour}, JobsCollector{Window: 24 * time.Hour, Now: nowZero})
 	c := &Collector{
 		systems:    []system{{name: "nsr-test", client: client}},
 		collectors: collectors,

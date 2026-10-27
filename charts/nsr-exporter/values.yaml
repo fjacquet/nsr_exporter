@@ -99,6 +99,7 @@ config: |
     interval: "5m"
     timeout: "60s"
     backupWindow: "24h"
+    jobWindow: "24h" # only export /jobs started within this window
   systems:
     - name: nsr-prod-01
       host: "https://networker-prod-01.local:9090"

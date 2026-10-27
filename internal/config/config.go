@@ -51,6 +51,9 @@ type CollectionConfig struct {
 	// BackupWindow bounds the /backups sizing query (ADR-0010): only save sets with
 	// saveTime within this lookback are fetched, so the full catalog is never pulled.
 	BackupWindow time.Duration `yaml:"backupWindow"`
+	// JobWindow bounds the /jobs query: only jobs started within this lookback are
+	// fetched and exported. NetWorker's own jobsdb retention defaults to 72h.
+	JobWindow time.Duration `yaml:"jobWindow"`
 }
 
 // SystemConfig is one NetWorker server target. A single exporter process serves
@@ -143,6 +146,14 @@ func (c *Config) applyDefaults() error {
 	if c.Collection.BackupWindow == 0 {
 		c.Collection.BackupWindow = 24 * time.Hour
 	}
+	if c.Collection.JobWindow == 0 {
+		c.Collection.JobWindow = 24 * time.Hour
+		// A long poll interval would make the 24h default violate the 2x floor
+		// enforced in validate(); follow the interval rather than reject.
+		if floor := 2 * c.Collection.Interval; c.Collection.JobWindow < floor {
+			c.Collection.JobWindow = floor
+		}
+	}
 	if c.OpenTelemetry.PushInterval == 0 {
 		c.OpenTelemetry.PushInterval = 30 * time.Second
 	}
@@ -168,6 +179,15 @@ var reservedServerURIs = []string{"/livez", "/readyz", "/health"}
 func (c *Config) validate() error {
 	if len(c.Systems) == 0 {
 		return fmt.Errorf("config defines no systems")
+	}
+	if c.Collection.JobWindow < 0 {
+		return fmt.Errorf("collection.jobWindow must not be negative, got %v", c.Collection.JobWindow)
+	}
+	// Shorter than the poll interval, jobs that start and end between two polls are
+	// never seen; twice the interval tolerates one missed cycle.
+	if c.Collection.JobWindow < 2*c.Collection.Interval {
+		return fmt.Errorf("collection.jobWindow (%v) must be at least twice collection.interval (%v)",
+			c.Collection.JobWindow, c.Collection.Interval)
 	}
 	for _, reserved := range reservedServerURIs {
 		if c.Server.URI == reserved {

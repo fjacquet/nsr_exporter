@@ -13,6 +13,7 @@ nsr_exporter --config real.yaml --once --debug --trace 2>trace.log | sort > samp
 | Metric | Type | Labels | Meaning |
 |---|---|---|---|
 | `nsr_up` | Gauge | `system` | 1 if the system was reachable this cycle, else 0 |
+| `nsr_collection_duration_seconds` | Gauge | `system` | Wall-clock seconds one collection cycle took for this system (all collectors); emitted every cycle, including failed ones |
 | `nsr_guard_repaired_samples` | Gauge | `reason`, `system` | Samples the series guard dropped or rewrote this cycle because they would abort `/metrics`. `reason` is `duplicate`, `type_mismatch`, `help_mismatch` or `invalid_label`; always emitted, 0 when healthy |
 
 ## Alerts (`/alerts`)
@@ -101,6 +102,14 @@ nsr_exporter --config real.yaml --once --debug --trace 2>trace.log | sort > samp
 |---|---|---|---|
 | `nsr_policy_enabled` | Gauge | `policy` | 1 if the protection policy is enabled, else 0 |
 | `nsr_group_info` | Gauge (1) | `group`, `work_item_type` | A protection group (replaces removed `nsr_group_client_count`) |
+
+`nsr_job_*` series from `/jobs` are bounded by `collection.jobWindow` (default 24h):
+jobs whose `startTime` is older are neither requested (`q=startTime:["N hours"]`) nor
+exported. The client-side cut keeps a job with an unparseable `startTime`, but the
+server-side `q=` filter will likely exclude jobs that have no `startTime` at all. If the
+server rejects the `q=` filter with HTTP 400, that system loses its `nsr_server_*` samples and
+`nsr_up` is 0. Changing `collection.jobWindow` needs a process restart: SIGHUP only validates
+the config today.
 
 ## Sizing & capacity forecasting (bounded `/backups`)
 

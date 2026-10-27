@@ -109,6 +109,17 @@ func TestGuard_InvalidLabelName(t *testing.T) {
 	}
 }
 
+func TestGuard_NonUTF8LabelValue(t *testing.T) {
+	in := []models.Sample{
+		gs("m", "h", models.Gauge, 1, lbl("k", "bad\xff"), lbl("system", "a")),
+		gs("m", "h", models.Gauge, 1, lbl("k", "ok"), lbl("system", "a")),
+	}
+	out := guardSamples(in, []string{"a"}, testLogger())
+	if countName(out, "m") != 1 || guardCount(out, "a", "invalid_label") != 1 {
+		t.Fatalf("got %+v", out)
+	}
+}
+
 func TestGuard_LabelKeySetMismatchUntouched(t *testing.T) {
 	in := []models.Sample{
 		gs("m", "h", models.Gauge, 1, lbl("k", "1"), lbl("system", "a")),
