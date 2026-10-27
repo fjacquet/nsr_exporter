@@ -10,6 +10,8 @@ summarize each release at the level the commit messages support.
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-10-27
+
 ### Changed
 
 - `nsr_job_status` and `nsr_job_*_timestamp_seconds` now cover only jobs started in the last `collection.jobWindow` (48h by default). NetWorker retains jobs 72h by default, so a default server shows the newest two thirds of its job history; raise `jobWindow` to see more, at the cost of a larger `/metrics` body. A still-running job that started before the window is also dropped.
