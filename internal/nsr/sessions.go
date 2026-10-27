@@ -38,22 +38,51 @@ func (SessionsCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]mo
 		return nil, err
 	}
 
-	var b builder
+	// Concurrent sessions on one host share (client, mode); aggregate per pair so
+	// each series is emitted once (duplicates fail the whole /metrics scrape).
+	type key struct{ mode, client string }
+	type agg struct {
+		n          float64
+		bytes, bps float64
+		hasB, hasR bool
+	}
+	groups := make(map[key]*agg)
+	var order []key
 	byMode := make(map[string]float64)
 	for _, s := range resp.Sessions {
-		b.gauge("nsr_session_active", "An active NetWorker session (always 1).", 1,
-			lbl("session_type", s.Mode), lbl("client", s.ClientHostname))
-		// size and transferRate are {unit,value} objects; absent/unknown → no sample.
+		k := key{s.Mode, s.ClientHostname}
+		g := groups[k]
+		if g == nil {
+			g = &agg{}
+			groups[k] = g
+			order = append(order, k)
+		}
+		g.n++
+		// size and transferRate are {unit,value} objects; unparseable → not summed.
 		if v, ok := s.Size.Bytes(); ok {
-			b.gauge("nsr_session_bytes", "Bytes moved so far by an active session.", v,
-				lbl("session_type", s.Mode), lbl("client", s.ClientHostname))
+			g.bytes += v
+			g.hasB = true
 		}
 		if v, ok := s.TransferRate.BytesPerSecond(); ok {
-			b.gauge("nsr_session_transfer_bytes_per_second",
-				"Live transfer rate of an active session (gauge; aggregate with sum/avg, never rate()).", v,
-				lbl("session_type", s.Mode), lbl("client", s.ClientHostname))
+			g.bps += v
+			g.hasR = true
 		}
 		byMode[s.Mode]++
+	}
+
+	var b builder
+	for _, k := range order {
+		g := groups[k]
+		l := []models.Label{lbl("session_type", k.mode), lbl("client", k.client)}
+		b.gauge("nsr_session_active", "Count of active NetWorker sessions for a client and mode.", g.n, l...)
+		// no parseable value in the group → no sample, never a false 0 (ADR-0008).
+		if g.hasB {
+			b.gauge("nsr_session_bytes", "Bytes moved so far, summed over a client's active sessions.", g.bytes, l...)
+		}
+		if g.hasR {
+			b.gauge("nsr_session_transfer_bytes_per_second",
+				"Live transfer rate summed over a client's active sessions (gauge; aggregate with sum/avg, never rate()).", g.bps, l...)
+		}
 	}
 	for mode, n := range byMode {
 		b.gauge("nsr_active_sessions", "Count of active sessions by mode.", n, lbl("session_type", mode))

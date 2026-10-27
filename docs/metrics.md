@@ -51,10 +51,10 @@ nsr_exporter --config real.yaml --once --debug --trace 2>trace.log | sort > samp
 
 | Metric | Type | Labels | Meaning |
 |---|---|---|---|
-| `nsr_session_active` | Gauge (1) | `session_type`, `client` | An active session; `state` label removed; `session_type` values: Saving/Recovering/Browsing |
-| `nsr_session_bytes` | Gauge | `session_type`, `client` | Bytes moved so far (absent if unknown); `state` label removed |
+| `nsr_session_active` | Gauge | `session_type`, `client` | Count of concurrent active sessions for the client and mode; `session_type` values: Saving/Recovering/Browsing |
+| `nsr_session_bytes` | Gauge | `session_type`, `client` | Bytes moved so far, summed over the client's concurrent sessions (absent if none parseable) |
 | `nsr_active_sessions` | Gauge | `session_type` | Count of active sessions by type (renamed from `nsr_sessions_total`; `session_type` values: Saving/Recovering/Browsing) |
-| `nsr_session_transfer_bytes_per_second` | Gauge | `session_type`, `client` | Live transfer throughput — aggregate with `sum`/`avg`, **never `rate()`** |
+| `nsr_session_transfer_bytes_per_second` | Gauge | `session_type`, `client` | Live transfer throughput, summed over the client's concurrent sessions — aggregate with `sum`/`avg`, **never `rate()`** |
 
 ## Storage & capacity (`/volumes`, `/datadomainsystems`)
 

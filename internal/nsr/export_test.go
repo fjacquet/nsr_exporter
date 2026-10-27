@@ -199,6 +199,106 @@ func TestSessionsCollector(t *testing.T) {
 	}
 }
 
+// TestSessionsCollector_ConcurrentSameClient: many concurrent sessions on one host
+// share (client, session_type, system); they must aggregate into one series per
+// metric, not collide (issue #72 — duplicates make /metrics return HTTP 500).
+func TestSessionsCollector_ConcurrentSameClient(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/nwrestapi/v3/global/sessions", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		writeBody(w, `{"count":5,"sessions":[
+{"mode":"Saving","clientHostname":"bbps001","size":{"unit":"Byte","value":100},"transferRate":{"unit":"KB/s","value":1}},
+{"mode":"Saving","clientHostname":"bbps001","size":{"unit":"Byte","value":200},"transferRate":{"unit":"KB/s","value":2}},
+{"mode":"Saving","clientHostname":"bbps001"},
+{"mode":"Recovering","clientHostname":"bbps001","size":{"unit":"Byte","value":50},"transferRate":{"unit":"KB/s","value":4}},
+{"mode":"Saving","clientHostname":"nosize01"}]}`)
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+	c, store := testCollector(srv)
+	c.collectors = []ResourceCollector{SessionsCollector{}}
+	c.CollectOnce(context.Background())
+
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(NewPromCollector(store))
+	fams, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather: %v", err)
+	}
+	sample := func(name, mode, client string) (float64, bool) {
+		for _, f := range fams {
+			if f.GetName() != name {
+				continue
+			}
+			for _, m := range f.Metric {
+				for _, l := range m.Label {
+					if l.GetName() != "client" || l.GetValue() != client {
+						continue
+					}
+					for _, ml := range m.Label {
+						if ml.GetName() == "session_type" && ml.GetValue() == mode {
+							return m.GetGauge().GetValue(), true
+						}
+					}
+				}
+			}
+		}
+		return 0, false
+	}
+	for name, want := range map[string]float64{
+		"nsr_session_active":                    3, // counts the size-less session too
+		"nsr_session_bytes":                     300,
+		"nsr_session_transfer_bytes_per_second": 3072,
+	} {
+		if got, ok := sample(name, "Saving", "bbps001"); !ok || got != want {
+			t.Fatalf("%s{session_type=Saving,client=bbps001} = %v (present=%v), want %v", name, got, ok, want)
+		}
+	}
+	// a different mode on the same client stays its own series.
+	for name, want := range map[string]float64{
+		"nsr_session_active":                    1,
+		"nsr_session_bytes":                     50,
+		"nsr_session_transfer_bytes_per_second": 4096,
+	} {
+		if got, ok := sample(name, "Recovering", "bbps001"); !ok || got != want {
+			t.Fatalf("%s{session_type=Recovering,client=bbps001} = %v (present=%v), want %v", name, got, ok, want)
+		}
+	}
+	// absent, never zero: no parseable size/rate → no sample.
+	if _, ok := sample("nsr_session_bytes", "Saving", "nosize01"); ok {
+		t.Fatal("nsr_session_bytes emitted for client with no parseable size")
+	}
+	if _, ok := sample("nsr_session_transfer_bytes_per_second", "Saving", "nosize01"); ok {
+		t.Fatal("nsr_session_transfer_bytes_per_second emitted for client with no parseable rate")
+	}
+	if got, ok := sample("nsr_session_active", "Saving", "nosize01"); !ok || got != 1 {
+		t.Fatalf("nsr_session_active{client=nosize01} = %v (present=%v), want 1", got, ok)
+	}
+
+	reader := sdkmetric.NewManualReader()
+	if _, err := NewOTLPExporter(store, reader); err != nil {
+		t.Fatalf("otlp: %v", err)
+	}
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(context.Background(), &rm); err != nil {
+		t.Fatalf("otlp collect: %v", err)
+	}
+	// 300 (Saving) + 50 (Recovering) across the two series.
+	var total float64
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if g, ok := m.Data.(metricdata.Gauge[float64]); ok && m.Name == "nsr_session_bytes" {
+				for _, dp := range g.DataPoints {
+					total += dp.Value
+				}
+			}
+		}
+	}
+	if total != 350 {
+		t.Fatalf("otlp nsr_session_bytes total = %v, want 350", total)
+	}
+}
+
 // TestStorageCollector covers two endpoints in one collector, the volume counter
 // with its own label set, and the Data Domain capacity gauges.
 func TestStorageCollector(t *testing.T) {
