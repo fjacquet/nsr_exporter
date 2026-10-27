@@ -210,8 +210,9 @@ func TestScaleBudget_5000Clients(t *testing.T) {
 		t.Fatalf("/metrics status %d", rec.Code)
 	}
 	t.Logf("collect=%v render=%v body=%d bytes", collect, render, rec.Body.Len())
-	if rec.Body.Len() >= 20*1024*1024 {
-		t.Fatalf("/metrics body = %d bytes, want < 20 MiB", rec.Body.Len())
+	t.Logf("body = %.1f MiB", float64(rec.Body.Len())/(1024*1024))
+	if rec.Body.Len() >= 20_000_000 {
+		t.Fatalf("/metrics body = %d bytes, want < 20 MB (20,000,000)", rec.Body.Len())
 	}
 
 	reader := sdkmetric.NewManualReader()

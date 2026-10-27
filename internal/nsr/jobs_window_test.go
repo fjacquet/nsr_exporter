@@ -106,6 +106,9 @@ func TestJobWindowFilter(t *testing.T) {
 	if got, want := jobWindowFilter(10*time.Minute), `startTime:["1 hours"]`; got != want {
 		t.Fatalf("jobWindowFilter(10m) = %q, want %q", got, want)
 	}
+	if got, want := jobWindowFilter(90*time.Minute), `startTime:["2 hours"]`; got != want {
+		t.Fatalf("jobWindowFilter(90m) = %q, want %q", got, want)
+	}
 }
 
 func TestJobs_SendsWindowFilter(t *testing.T) {

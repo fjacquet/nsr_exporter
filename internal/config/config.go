@@ -175,6 +175,9 @@ func (c *Config) validate() error {
 	if len(c.Systems) == 0 {
 		return fmt.Errorf("config defines no systems")
 	}
+	if c.Collection.JobWindow < 0 {
+		return fmt.Errorf("collection.jobWindow must not be negative, got %v", c.Collection.JobWindow)
+	}
 	for _, reserved := range reservedServerURIs {
 		if c.Server.URI == reserved {
 			return fmt.Errorf("server.uri %q collides with a reserved health-probe path (reserved: %s)",

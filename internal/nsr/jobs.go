@@ -3,6 +3,7 @@ package nsr
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"strconv"
 	"time"
 
@@ -65,7 +66,7 @@ func (JobsCollector) Name() string { return "jobs" }
 // If the server rejects the filter with HTTP 400, Collect returns an error, so the
 // same collector's nsr_server_* samples are lost and nsr_up is 0 until it is fixed.
 func jobWindowFilter(window time.Duration) string {
-	hours := int(window.Hours())
+	hours := int(math.Ceil(window.Hours())) // round up: a fractional window must not under-fetch
 	if hours < 1 {
 		hours = 1
 	}

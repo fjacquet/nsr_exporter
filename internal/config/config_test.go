@@ -71,6 +71,15 @@ func TestConfig_JobWindowDefault(t *testing.T) {
 	}
 }
 
+func TestConfig_RejectsNegativeJobWindow(t *testing.T) {
+	t.Setenv("TEST_NSR_USER", "admin")
+	t.Setenv("TEST_NSR_PASS", "s3cret")
+	_, err := Load(writeTemp(t, strings.Replace(validYAML, "timeout: 30s", "timeout: 30s\n  jobWindow: -1h", 1)))
+	if err == nil || !strings.Contains(err.Error(), "jobWindow") {
+		t.Fatalf("err = %v, want error naming jobWindow", err)
+	}
+}
+
 func TestLoad_FailFastOnUnsetEnv(t *testing.T) {
 	_ = os.Unsetenv("TEST_NSR_USER")
 	_ = os.Unsetenv("TEST_NSR_PASS")

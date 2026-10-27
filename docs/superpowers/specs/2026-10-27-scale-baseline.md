@@ -158,7 +158,7 @@ gzip, one machine.
 
 Keep the 24h default: it holds about 16,700 jobs (at this fixture's rate of 694 jobs/h) and gives
 9.4 MB, less than half the cap. By extrapolation at 381 B/job the cap is reached at about 44,500
-jobs for 20 MB (47,000 for 20 MiB, which the test asserts), about 63 to 68h of this fixture. So
+jobs for 20 MB (47,000 for 20 MiB; the test asserts the 20 MB figure), about 63 to 68h of this fixture. So
 raising the window to 48h (about 33,000 jobs, about 15.6 MB by extrapolation) is still under the
 cap, and 72h is not. Caveats: the job rate is the fixture's (50,000 jobs per 72h), not a
 measurement of any real server; labels in production may be longer than the fixture's, so scale
