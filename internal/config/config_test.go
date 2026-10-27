@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -47,6 +48,26 @@ func TestLoad_ExpandsEnvAndDefaults(t *testing.T) {
 	}
 	if cfg.Collection.Interval != 2*time.Minute {
 		t.Fatalf("interval = %v, want 2m", cfg.Collection.Interval)
+	}
+}
+
+func TestConfig_JobWindowDefault(t *testing.T) {
+	t.Setenv("TEST_NSR_USER", "admin")
+	t.Setenv("TEST_NSR_PASS", "s3cret")
+
+	cfg, err := Load(writeTemp(t, validYAML))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Collection.JobWindow != 24*time.Hour {
+		t.Fatalf("default jobWindow = %v, want 24h", cfg.Collection.JobWindow)
+	}
+	cfg, err = Load(writeTemp(t, strings.Replace(validYAML, "timeout: 30s", "timeout: 30s\n  jobWindow: 6h", 1)))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Collection.JobWindow != 6*time.Hour {
+		t.Fatalf("jobWindow = %v, want 6h", cfg.Collection.JobWindow)
 	}
 }
 

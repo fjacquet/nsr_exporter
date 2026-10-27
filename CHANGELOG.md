@@ -10,8 +10,13 @@ summarize each release at the level the commit messages support.
 
 ## [Unreleased]
 
+### Changed
+
+- `nsr_job_status` and `nsr_job_*_timestamp_seconds` now cover only jobs started in the last `collection.jobWindow` (24h by default). NetWorker retains jobs 72h by default, so a default server shows less job history than before; raise `jobWindow` to restore it. A still-running job that started before the window is also dropped.
+
 ### Added
 
+- New option `collection.jobWindow` (default `24h`) bounding `/jobs` with a server-side `q=startTime:["N hours"]` filter plus a client-side cut, so job series no longer grow with the server's whole job history. The `q=` form follows the swagger time-range syntax; live validation is pending.
 - New gauge `nsr_collection_duration_seconds{system}`: wall-clock seconds one collection cycle took for each system.
 - Series guard: duplicate series, type or help mismatches and invalid label names are repaired before the snapshot is published, so one bad collector can no longer make `/metrics` return HTTP 500. New gauge `nsr_guard_repaired_samples{reason,system}` counts what was repaired; alert `NsrSeriesRepaired` fires when it is above 0.
 

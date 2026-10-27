@@ -12,6 +12,7 @@ collection:
   interval: "30s"     # snappy refresh for the demo
   timeout: "10s"
   backupWindow: "24h"
+  jobWindow: "24h"
 systems:
   - name: nsr-demo
     host: "http://mocknw:9090"   # bundled mock; client appends the /nwrestapi/v3/global base path

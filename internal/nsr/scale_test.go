@@ -138,6 +138,35 @@ func scaleMock(t testing.TB, clients, sessions, jobs int) *httptest.Server {
 	return httptest.NewServer(mux)
 }
 
+// realClockJobs swaps in a JobsCollector on the real clock: testCollector's nowZero
+// (1970) would make every fixture job "in the future" and measure the unbounded case.
+func realClockJobs(c *Collector, window time.Duration) {
+	for i, rc := range c.collectors {
+		if _, ok := rc.(JobsCollector); ok {
+			c.collectors[i] = JobsCollector{Window: window}
+		}
+	}
+}
+
+func TestScaleJobWindowCutApplies(t *testing.T) {
+	const jobs = 3000
+	srv := scaleMock(t, 20, 40, jobs)
+	defer srv.Close()
+	c, store := testCollector(srv)
+	realClockJobs(c, 24*time.Hour)
+	c.CollectOnce(context.Background())
+	n := 0
+	for _, s := range store.Load().Samples {
+		if s.Name == "nsr_job_status" {
+			n++
+		}
+	}
+	// fixture spreads jobs over 72h, so a 24h window keeps roughly a third.
+	if n == 0 || n > jobs/2 {
+		t.Fatalf("nsr_job_status series = %d, want clearly below %d", n, jobs)
+	}
+}
+
 func TestScaleMockKeepsSystemUp(t *testing.T) {
 	srv := scaleMock(t, 20, 40, 100)
 	defer srv.Close()
@@ -159,6 +188,7 @@ func scaleBench(b *testing.B) (*Collector, *prometheus.Registry) {
 	srv := scaleMock(b, scaleClients, scaleSessions, scaleJobs)
 	b.Cleanup(srv.Close)
 	c, store := testCollector(srv)
+	realClockJobs(c, 24*time.Hour)
 	c.timeout = 5 * time.Minute
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(NewPromCollector(store))

@@ -3,6 +3,8 @@ package nsr
 import (
 	"context"
 	"encoding/json"
+	"strconv"
+	"time"
 
 	"github.com/fjacquet/nsr_exporter/internal/models"
 	"github.com/fjacquet/nsr_exporter/internal/nsrclient"
@@ -45,14 +47,31 @@ type nwJob struct {
 	Level            string      `json:"level"`     // 19.13+ (absent on older servers)
 }
 
-// JobsCollector maps GET /serverstatistics and GET /jobs.
-type JobsCollector struct{}
+// JobsCollector maps GET /serverstatistics and GET /jobs. Window bounds /jobs to
+// jobs started within the lookback; Now is the clock for the client-side cut
+// (nil means time.Now).
+type JobsCollector struct {
+	Window time.Duration
+	Now    func() time.Time
+}
 
 // Name identifies the jobs collector.
 func (JobsCollector) Name() string { return "jobs" }
 
+// jobWindowFilter builds the NetWorker q= filter bounding /jobs to jobs started
+// within the lookback window. The swagger 19.13 time-range form
+// AttributeName:["N hours"] is the documented syntax; live-server validation of
+// startTime on /jobs is pending, so a correction touches only this function.
+func jobWindowFilter(window time.Duration) string {
+	hours := int(window.Hours())
+	if hours < 1 {
+		hours = 1
+	}
+	return `startTime:["` + strconv.Itoa(hours) + ` hours"]`
+}
+
 // Collect fetches server-wide statistics and individual job records.
-func (JobsCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]models.Sample, error) {
+func (jc JobsCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]models.Sample, error) {
 	var b builder
 
 	var stats serverStatistics
@@ -75,11 +94,23 @@ func (JobsCollector) Collect(ctx context.Context, c *nsrclient.Client) ([]models
 
 	var jobs jobsResponse
 	if err := c.Get(ctx, "/jobs", nsrclient.QueryOpts{
+		Filter: jobWindowFilter(jc.Window),
 		Fields: []string{"id", "name", "type", "state", "completionStatus", "clientHostname", "startTime", "endTime", "level"},
 	}, &jobs); err != nil {
 		return nil, err
 	}
+	now := time.Now
+	if jc.Now != nil {
+		now = jc.Now
+	}
+	cutoff := float64(now().Add(-jc.Window).Unix())
 	for _, j := range jobs.Jobs {
+		// Defense in depth if the server ignores q=. A job with an absent or
+		// unparseable startTime is kept (ADR-0008). A still-running job that began
+		// before the window is dropped too (accepted).
+		if ts, ok := parseTime(j.StartTime); ok && ts < cutoff {
+			continue
+		}
 		b.gauge("nsr_job_status", "An individual NetWorker job (always 1).", 1,
 			lbl("job_id", j.ID.String()),
 			lbl("job_name", j.Name),

@@ -51,6 +51,9 @@ type CollectionConfig struct {
 	// BackupWindow bounds the /backups sizing query (ADR-0010): only save sets with
 	// saveTime within this lookback are fetched, so the full catalog is never pulled.
 	BackupWindow time.Duration `yaml:"backupWindow"`
+	// JobWindow bounds the /jobs query: only jobs started within this lookback are
+	// fetched and exported. NetWorker's own jobsdb retention defaults to 72h.
+	JobWindow time.Duration `yaml:"jobWindow"`
 }
 
 // SystemConfig is one NetWorker server target. A single exporter process serves
@@ -142,6 +145,9 @@ func (c *Config) applyDefaults() error {
 	}
 	if c.Collection.BackupWindow == 0 {
 		c.Collection.BackupWindow = 24 * time.Hour
+	}
+	if c.Collection.JobWindow == 0 {
+		c.Collection.JobWindow = 24 * time.Hour
 	}
 	if c.OpenTelemetry.PushInterval == 0 {
 		c.OpenTelemetry.PushInterval = 30 * time.Second

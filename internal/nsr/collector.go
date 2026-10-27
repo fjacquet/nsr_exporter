@@ -52,9 +52,12 @@ func NewCollector(cfg *config.Config, store *SnapshotStore, log *logrus.Logger, 
 		systems = append(systems, system{name: s.Name, client: client})
 	}
 	collectors := DefaultCollectors()
-	// SizingCollector is stateful (lookback window + clock), so it is appended here
-	// rather than in the stateless DefaultCollectors set.
-	collectors = append(collectors, SizingCollector{Window: cfg.Collection.BackupWindow})
+	// SizingCollector and JobsCollector are stateful (lookback window), so they are
+	// appended here rather than in the stateless DefaultCollectors set.
+	collectors = append(collectors,
+		SizingCollector{Window: cfg.Collection.BackupWindow},
+		JobsCollector{Window: cfg.Collection.JobWindow},
+	)
 
 	return &Collector{
 		systems:    systems,
@@ -68,12 +71,11 @@ func NewCollector(cfg *config.Config, store *SnapshotStore, log *logrus.Logger, 
 }
 
 // DefaultCollectors is the canonical set of stateless resource collectors. The
-// stateful SizingCollector is added separately by NewCollector.
+// stateful SizingCollector and JobsCollector are added separately by NewCollector.
 func DefaultCollectors() []ResourceCollector {
 	return []ResourceCollector{
 		AlertsCollector{},
 		ClientsCollector{},
-		JobsCollector{},
 		SessionsCollector{},
 		StorageCollector{},
 		DevicesCollector{},
