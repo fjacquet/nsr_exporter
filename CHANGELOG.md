@@ -10,6 +10,8 @@ summarize each release at the level the commit messages support.
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-10-27
+
 ### Changed
 
 - `collection.backupWindow` now follows the same rules as `jobWindow`: a negative value, or a value below twice `collection.interval`, is rejected at startup (a shorter window misses save sets written between two polls). The unset default stays 24h, or twice the interval if that is larger. A config that sets an explicit `backupWindow` shorter than twice its `collection.interval` will no longer start; raise `backupWindow` or lower `interval`.
